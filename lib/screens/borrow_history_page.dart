@@ -255,9 +255,7 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
                             if (isReturned) {
                               await borrowHistoryRef.add(record.toFirestore());
                             } else if (record.id.isNotEmpty) {
-                              await borrowHistoryRef
-                                  .doc(record.id)
-                                  .update({
+                              await borrowHistoryRef.doc(record.id).update({
                                 'dueDate':
                                     DateTime.now().add(const Duration(days: 7))
                               });
@@ -268,8 +266,7 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8)),
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 16),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             minimumSize: const Size(0, 30),
                           ),
@@ -285,8 +282,7 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
                                 color: kPrimaryBrown.withOpacity(0.5)),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8)),
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 16),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             minimumSize: const Size(0, 30),
                           ),
@@ -314,7 +310,9 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
             borderRadius: BorderRadius.circular(8)),
         child: const Text('Returned',
             style: TextStyle(
-                fontSize: 11, color: kPrimaryBrown, fontWeight: FontWeight.bold)),
+                fontSize: 11,
+                color: kPrimaryBrown,
+                fontWeight: FontWeight.bold)),
       );
     } else {
       final String formattedDate =

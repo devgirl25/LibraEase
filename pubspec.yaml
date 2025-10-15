@@ -18,7 +18,7 @@ dependencies:
   intl: ^0.19.0
  # mobile_scanner: ^7.1.2
  # flutter_barcode_scanner: ^2.0.0
-  firebase_storage: ^13.0.3
+  mobile_scanner: ^7.1.2
 
   # Image Picker (pick images from gallery or camera)
   image_picker: ^1.2.0

@@ -8,7 +8,7 @@ class BorrowService {
     required String bookId,
     required String bookTitle,
     required String userId,
-    int borrowDays = 14, // default 2 weeks
+    int borrowDays = 14,
   }) async {
     final now = DateTime.now();
     final dueDate = now.add(Duration(days: borrowDays));
@@ -23,13 +23,13 @@ class BorrowService {
       'status': 'borrowed',
     });
 
-    // 2️⃣ Update book status
-    await _firestore.collection('books').doc(bookId).update({
+    // 2️⃣ Update or create book record
+    await _firestore.collection('books').doc(bookId).set({
       'status': 'borrowed',
       'borrowedBy': userId,
       'borrowDate': Timestamp.fromDate(now),
       'dueDate': Timestamp.fromDate(dueDate),
-    });
+    }, SetOptions(merge: true));
   }
 
   /// Return a book
@@ -37,12 +37,11 @@ class BorrowService {
     required String bookId,
     required String borrowRequestId,
   }) async {
-    // Update borrow request
     await _firestore.collection('borrow_requests').doc(borrowRequestId).update({
       'status': 'returned',
+      'returnDate': Timestamp.now(),
     });
 
-    // Update book document
     await _firestore.collection('books').doc(bookId).update({
       'status': 'available',
       'borrowedBy': null,
@@ -50,5 +49,25 @@ class BorrowService {
       'dueDate': null,
     });
   }
-}
 
+  /// Mark overdue books
+  Future<void> markOverdueBooks() async {
+    final now = DateTime.now();
+    final snapshot = await _firestore
+        .collection('borrow_requests')
+        .where('status', isEqualTo: 'borrowed')
+        .get();
+
+    for (var doc in snapshot.docs) {
+      final dueDate = (doc['dueDate'] as Timestamp).toDate();
+      if (now.isAfter(dueDate)) {
+        await doc.reference.update({'status': 'overdue'});
+
+        final bookId = doc['bookId'];
+        await _firestore.collection('books').doc(bookId).update({
+          'status': 'overdue',
+        });
+      }
+    }
+  }
+}

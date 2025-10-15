@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/dashboardcard.dart';
-import 'add_book_Page.dart';
+import 'add_book_page.dart';
 
 class DashboardGrid extends StatelessWidget {
   const DashboardGrid({super.key});
@@ -16,12 +16,30 @@ class DashboardGrid extends StatelessWidget {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         children: [
-          DashboardCard(
-            value: "750",
-            title: "MEMBERS",
-            icon: Icons.group,
-            onTap: () {
-              // Navigate to Members Page
+          // ✅ Members card with dynamic count from Firestore users collection
+          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: FirebaseFirestore.instance
+                .collection('users')
+                // .where('role', isEqualTo: 'student') // uncomment to count only students
+                .snapshots(),
+            builder: (context, snapshot) {
+              String countText = "0";
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                countText = "...";
+              } else if (snapshot.hasError) {
+                countText = "0"; // fallback on error
+              } else if (snapshot.hasData) {
+                countText = snapshot.data!.docs.length.toString();
+              }
+
+              return DashboardCard(
+                value: countText,
+                title: "MEMBERS",
+                icon: Icons.group,
+                onTap: () {
+                  // Navigate to Members Page
+                },
+              );
             },
           ),
 
@@ -52,12 +70,25 @@ class DashboardGrid extends StatelessWidget {
             },
           ),
 
-          DashboardCard(
-            value: "70",
-            title: "BORROW REQUESTS",
-            icon: Icons.download_for_offline,
-            onTap: () {
-              // Navigate to Borrow Requests Page
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('borrow_requests')
+                .snapshots(),
+            builder: (context, snapshot) {
+              String countText = "0";
+              if (snapshot.hasData) {
+                countText = snapshot.data!.docs.length.toString();
+              } else if (snapshot.hasError) {
+                countText = "0";
+              }
+              return DashboardCard(
+                value: countText,
+                title: "BORROW REQUESTS",
+                icon: Icons.download_for_offline,
+                onTap: () {
+                  // Navigate to Borrow Requests Page
+                },
+              );
             },
           ),
           DashboardCard(

@@ -1,14 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// Note: In a real app, these imports would be separate files.
-// They are mocked below for a single-file environment.
-// import 'constants.dart';
-// import 'notifications_page.dart';
-// import 'wishlist_page.dart';
-// import 'profile_page.dart';
-// import 'login_page_student.dart';
+import 'browse_books_page.dart';
 
-// --- MOCK CONSTANTS (Assuming colors based on context) ---
+// --- CONSTANT COLORS ---
 const Color kPrimaryBrown = Color.fromARGB(255, 87, 36, 14);
 const Color kLightCream = Color.fromARGB(255, 245, 235, 220);
 const Color kScaffoldBackground = Color.fromARGB(255, 210, 189, 166);
@@ -18,33 +12,34 @@ class NotificationsPage extends StatelessWidget {
   const NotificationsPage({super.key});
   @override
   Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(title: const Text('Notifications')),
-      body: const Center(child: Text('Notifications Content')));
+      appBar: AppBar(title: Text('Notifications')),
+      body: Center(child: Text('Notifications Content')));
 }
 
 class WishlistPage extends StatelessWidget {
   const WishlistPage({super.key});
   @override
   Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(title: const Text('Wishlist/Bookmarks')),
-      body: const Center(child: Text('Wishlist Content')));
+      appBar: AppBar(title: Text('Wishlist/Bookmarks')),
+      body: Center(child: Text('Wishlist Content')));
 }
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
   @override
   Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
-      body: const Center(child: Text('Profile Content')));
+      appBar: AppBar(title: Text('Profile')),
+      body: Center(child: Text('Profile Content')));
 }
 
 class LoginStudentScreen extends StatelessWidget {
   const LoginStudentScreen({super.key});
   @override
   Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(title: const Text('Login Screen Mock')),
-      body: const Center(child: Text('Returned to Login.')));
+      appBar: AppBar(title: Text('Login Screen Mock')),
+      body: Center(child: Text('Returned to Login.')));
 }
+
 // -----------------------------------------------------------
 
 class HomePage extends StatefulWidget {
@@ -54,58 +49,77 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   int _selectedIndex = 0;
+  bool _isNavigating = false;
   final User? user = FirebaseAuth.instance.currentUser;
+
+  final AssetImage backgroundImage =
+      const AssetImage("assets/images/forgot_password/library.png");
+
+  @override
+  void initState() {
+    super.initState();
+    // ✅ Preload background image to prevent frame drops
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      precacheImage(backgroundImage, context);
+    });
+  }
 
   void _signOut(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
-    // After sign out, navigate back to login page
+    if (!mounted) return;
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => const LoginStudentScreen()),
     );
   }
 
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+  Future<void> _onItemTapped(int index) async {
+    if (_isNavigating) return;
+    _isNavigating = true;
 
-    if (index == 1) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const NotificationsPage()),
-      ).then((_) => setState(() => _selectedIndex = 0)); // Reset tab on return
-    } else if (index == 2) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const WishlistPage()),
-      ).then((_) => setState(() => _selectedIndex = 0));
-    } else if (index == 3) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const ProfilePage()),
-      ).then((_) => setState(() => _selectedIndex = 0));
+    setState(() => _selectedIndex = index);
+
+    Widget? nextPage;
+    switch (index) {
+      case 1:
+        nextPage = const NotificationsPage();
+        break;
+      case 2:
+        nextPage = const WishlistPage();
+        break;
+      case 3:
+        nextPage = const ProfilePage();
+        break;
     }
+
+    if (nextPage != null) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => nextPage!),
+      );
+    }
+
+    if (mounted) setState(() => _selectedIndex = 0);
+    _isNavigating = false;
   }
 
-  // Helper widget for the header displaying user info
   Widget _buildHeader() {
     final email = user?.email ?? 'Guest User';
     return Row(
       children: [
         Image.asset(
-          // Using a common placeholder icon if the asset path is invalid
           'assets/images/splash_screen/library_icon.png',
           color: kLightCream,
           width: 40,
           height: 40,
-          errorBuilder: (context, error, stackTrace) => const Icon(
-            Icons.school,
-            color: kLightCream,
-            size: 40,
-          ),
+          errorBuilder: (_, __, ___) =>
+              const Icon(Icons.school, color: kLightCream, size: 40),
         ),
         const SizedBox(width: 12),
         Column(
@@ -161,7 +175,6 @@ class _HomePageState extends State<HomePage> {
       child: GestureDetector(
         onTap: onTap,
         child: Stack(
-          clipBehavior: Clip.none,
           alignment: Alignment.topCenter,
           children: [
             Positioned.fill(
@@ -237,7 +250,6 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
         child: Stack(
-          clipBehavior: Clip.none,
           alignment: Alignment.centerLeft,
           children: [
             Positioned(
@@ -306,6 +318,8 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // needed for AutomaticKeepAliveClientMixin
+
     return Scaffold(
       backgroundColor: kScaffoldBackground,
       body: SafeArea(
@@ -315,22 +329,19 @@ class _HomePageState extends State<HomePage> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(40),
               image: DecorationImage(
-                // This asset path must be valid in your project setup
-                image: const AssetImage(
-                    "assets/images/forgot_password/library.png"),
+                image: backgroundImage,
                 fit: BoxFit.cover,
                 colorFilter: ColorFilter.mode(
-                  kPrimaryBrown.withOpacity(0.85),
+                  kPrimaryBrown.withOpacity(0.8),
                   BlendMode.darken,
                 ),
-                // Add error handling for the background image
-                onError: (exception, stackTrace) => const SizedBox(),
               ),
             ),
             child: Column(
               children: [
                 Expanded(
                   child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
                     child: Padding(
                       padding: const EdgeInsets.all(24.0),
                       child: Column(
@@ -341,7 +352,7 @@ class _HomePageState extends State<HomePage> {
                           _buildSearchBar(),
                           const SizedBox(height: 32),
 
-                          // Row 1: E-Books & Books
+                          // Row 1
                           Row(
                             children: [
                               Expanded(
@@ -350,7 +361,7 @@ class _HomePageState extends State<HomePage> {
                                   icon: Icons.menu_book_outlined,
                                   title: 'BROWSE\nE-BOOKS',
                                   backgroundIcon: Icons.book_online_sharp,
-                                  onTap: () => print('Browse E-Books Tapped'),
+                                  onTap: () => debugPrint('Browse E-Books'),
                                 ),
                               ),
                               const SizedBox(width: 16),
@@ -360,14 +371,21 @@ class _HomePageState extends State<HomePage> {
                                   icon: Icons.book_outlined,
                                   title: 'BROWSE\nBOOKS',
                                   backgroundIcon: Icons.auto_stories,
-                                  onTap: () => print('Browse Books Tapped'),
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (_) =>
+                                              const BrowseBooksPage()),
+                                    );
+                                  },
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 24),
 
-                          // Row 2: Registrations & Previous Papers
+                          // Row 2
                           Row(
                             children: [
                               Expanded(
@@ -376,7 +394,8 @@ class _HomePageState extends State<HomePage> {
                                   icon: Icons.app_registration,
                                   title: 'REGISTRATIONS',
                                   backgroundIcon: Icons.edit_document,
-                                  onTap: () => print('Registrations Tapped'),
+                                  onTap: () =>
+                                      debugPrint('Registrations Tapped'),
                                 ),
                               ),
                               const SizedBox(width: 16),
@@ -387,23 +406,22 @@ class _HomePageState extends State<HomePage> {
                                   title: 'PREVIOUS\nYEAR PAPERS',
                                   backgroundIcon: Icons.find_in_page,
                                   onTap: () =>
-                                      print('Previous Year Papers Tapped'),
+                                      debugPrint('Previous Year Papers'),
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 24),
 
-                          // Wide Card: Borrow History
+                          // Wide Card
                           _buildWideMenuCard(
                             context: context,
                             icon: Icons.history,
                             title: 'BORROW HISTORY',
-                            onTap: () => print('Borrow History Tapped'),
+                            onTap: () => debugPrint('Borrow History Tapped'),
                           ),
                           const SizedBox(height: 32),
 
-                          // Sign Out Button (Replaces simple button from original Firebase file)
                           Center(
                             child: ElevatedButton.icon(
                               onPressed: () => _signOut(context),
@@ -413,7 +431,8 @@ class _HomePageState extends State<HomePage> {
                                 backgroundColor: kLightCream.withOpacity(0.9),
                                 foregroundColor: kPrimaryBrown,
                                 shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10)),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 30, vertical: 15),
                               ),
