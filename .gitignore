@@ -1,0 +1,24 @@
+# Flutter/Dart
+.dart_tool/
+.packages
+.pub-cache/
+.flutter-plugins
+.flutter-plugins-dependencies
+.idea/
+*.iml
+
+# Build outputs
+/build/
+# Android
+/android/.gradle/
+android/app/build/
+
+
+# VS Code
+.vscode/
+
+# Misc
+*.log
+*.lock
+allfiles.txt
+allfiles_sorted.txt

@@ -1,0 +1,42 @@
+name: libra
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.1 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  firebase_core: ^4.1.1
+  firebase_auth: ^6.0.2
+  get: ^4.7.2
+  cloud_firestore: ^6.0.1
+  intl: ^0.19.0
+ # mobile_scanner: ^7.1.2
+ # flutter_barcode_scanner: ^2.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/select_user_type/admin.png
+    - assets/images/splash_screen/library_icon.png
+    - assets/images/select_user_type/student.png
+    - assets/images/forgot_password/library.png
+
+
+  fonts:
+    - family: InknutAntiqua
+      fonts:
+        - asset: assets/fonts/InknutAntiqua-Regular.ttf
+        - asset: assets/fonts/InknutAntiqua-Bold.ttf
+          weight: 700
