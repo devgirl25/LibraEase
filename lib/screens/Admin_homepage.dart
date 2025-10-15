@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/dashboardcard.dart';
 import 'add_book_Page.dart';
 
@@ -23,17 +24,34 @@ class DashboardGrid extends StatelessWidget {
               // Navigate to Members Page
             },
           ),
-          DashboardCard(
-            value: "3650",
-            title: "BOOKS",
-            icon: Icons.library_books,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const AddBookPage()),
+
+          // ✅ Books card with dynamic count
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance.collection('books').snapshots(),
+            builder: (context, snapshot) {
+              String countText = "0";
+
+              if (snapshot.hasData) {
+                countText = snapshot.data!.docs.length.toString();
+              } else if (snapshot.hasError) {
+                countText = "Err";
+              }
+
+              return DashboardCard(
+                value: countText,
+                title: "BOOKS",
+                icon: Icons.library_books,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const AddBookPage()),
+                  );
+                },
               );
             },
           ),
+
           DashboardCard(
             value: "70",
             title: "BORROW REQUESTS",
@@ -62,4 +80,4 @@ class DashboardGrid extends StatelessWidget {
       ),
     );
   }
-}   
+}
