@@ -22,3 +22,4 @@ android/app/build/
 *.lock
 allfiles.txt
 allfiles_sorted.txt
+.env
