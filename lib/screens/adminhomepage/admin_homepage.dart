@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../widgets/dashboardcard.dart';
+import '../../widgets/dashboardcard.dart';
 import 'add_book_page.dart';
 
 class DashboardGrid extends StatelessWidget {
@@ -76,21 +76,27 @@ class DashboardGrid extends StatelessWidget {
                 .snapshots(),
             builder: (context, snapshot) {
               String countText = "0";
-              if (snapshot.hasData) {
-                countText = snapshot.data!.docs.length.toString();
+
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                countText = "..."; // loading
               } else if (snapshot.hasError) {
-                countText = "0";
+                countText = "Err"; // error
+              } else if (snapshot.hasData) {
+                countText = snapshot.data!.docs.length.toString();
               }
+
               return DashboardCard(
                 value: countText,
                 title: "BORROW REQUESTS",
                 icon: Icons.download_for_offline,
                 onTap: () {
                   // Navigate to Borrow Requests Page
+                  // e.g., Navigator.push(context, MaterialPageRoute(builder: (_) => BorrowRequestsPage()));
                 },
               );
             },
           ),
+
           DashboardCard(
             value: "09",
             title: "OVERDUE BOOKS",

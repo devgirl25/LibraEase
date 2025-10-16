@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'Login_page_student.dart';
-import 'Login_page_admin.dart';
+import 'login_page_student.dart';
+import 'login_page_admin.dart';
 
 class SelectUserTypeScreen extends StatelessWidget {
   const SelectUserTypeScreen({super.key});

@@ -1,7 +1,7 @@
 // lib/book_list_page.dart
 
 import 'package:flutter/material.dart';
-import 'constants.dart';
+import '../logins/constants.dart';
 
 // A more detailed data model that can be used for both types of books
 class Book {
@@ -20,48 +20,13 @@ class Book {
   });
 }
 
-// Mock data for the E-Books list
-final List<Book> ebooks = [
-  Book(
-    title: 'Software Engineering',
-    author: 'By Dr. Mahesh M. Goyani',
-    imagePath: 'assets/images/book1.png',
-    tag: 'Computer',
-  ),
-  Book(
-    title: 'A Textbook of Engineering Drawing',
-    author: 'By Dr. Mahesh M. Goyani',
-    imagePath: 'assets/images/book2.png',
-    tag: 'Computer',
-  ),
-];
-
-// Mock data for the Physical Books list
-final List<Book> physicalBooks = [
-  Book(
-    title: 'Software Engineering',
-    author: "By Brian D'Andrade",
-    imagePath: 'assets/images/book1.png',
-    tag: 'Computer',
-    isAvailable: true,
-  ),
-  Book(
-    title: 'Software Engineering',
-    author: "By Brian D'Andrade",
-    imagePath: 'assets/images/book2.png',
-    tag: 'Computer',
-    isAvailable: true,
-  ),
-];
-
-
 // This is the single, reusable page for showing a list of books.
-class BookListPage extends StatelessWidget {
+class BookPage extends StatelessWidget {
   final String pageTitle;
   final List<Book> books;
   final bool isEBookList;
 
-  const BookListPage({
+  const BookPage({
     super.key,
     required this.pageTitle,
     required this.books,
@@ -109,7 +74,8 @@ class BookListPage extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 child: Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -150,7 +116,7 @@ class BookListPage extends StatelessWidget {
                 width: 80,
                 height: 110,
                 fit: BoxFit.cover,
-                 errorBuilder: (context, error, stackTrace) => Container(
+                errorBuilder: (context, error, stackTrace) => Container(
                   width: 80,
                   height: 110,
                   color: Colors.grey[300],
@@ -194,39 +160,48 @@ class BookListPage extends StatelessWidget {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFD7CCC8),
-                            borderRadius: BorderRadius.circular(8)
-                          ),
-                          child: Text(book.tag, style: const TextStyle(fontSize: 10, color: kPrimaryBrown)),
+                              color: const Color(0xFFD7CCC8),
+                              borderRadius: BorderRadius.circular(8)),
+                          child: Text(book.tag,
+                              style: const TextStyle(
+                                  fontSize: 10, color: kPrimaryBrown)),
                         ),
                         if (!isEBookList && book.isAvailable) ...[
                           const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.green.shade100,
-                              borderRadius: BorderRadius.circular(8)
-                            ),
-                            child: Text('Available', style: TextStyle(fontSize: 10, color: Colors.green.shade800, fontWeight: FontWeight.bold)),
+                                color: Colors.green.shade100,
+                                borderRadius: BorderRadius.circular(8)),
+                            child: Text('Available',
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.green.shade800,
+                                    fontWeight: FontWeight.bold)),
                           ),
                         ],
                         const Spacer(), // Pushes the button and icon to the end
                         ElevatedButton(
                           onPressed: () {},
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: kPrimaryBrown,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            minimumSize: const Size(0, 30)
-                          ),
-                          child: Text(isEBookList ? 'Read Now' : 'Borrow Now', style: const TextStyle(fontSize: 12)),
+                              backgroundColor: kPrimaryBrown,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 12),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              minimumSize: const Size(0, 30)),
+                          child: Text(isEBookList ? 'Read Now' : 'Borrow Now',
+                              style: const TextStyle(fontSize: 12)),
                         ),
                         const SizedBox(width: 8),
-                        Icon(Icons.bookmark_border, color: kPrimaryBrown.withOpacity(0.7)),
+                        Icon(Icons.bookmark_border,
+                            color: kPrimaryBrown.withOpacity(0.7)),
                       ],
                     )
                   ],

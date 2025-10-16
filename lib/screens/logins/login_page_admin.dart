@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'forgot_password.dart';
-import 'Admin_homepage.dart';
+import '../adminhomepage/Admin_homepage.dart';
 import 'Select_user_type.dart';
 
 class LoginAdminScreen extends StatefulWidget {

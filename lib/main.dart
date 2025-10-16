@@ -1,6 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'screens/Splash_screen.dart';
+import 'screens/logins/splash_screen.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // ✅ Firestore import
 

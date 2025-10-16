@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'constants.dart';
+import '../logins/constants.dart';
 
 // A simple data model for an E-Book
 class EBook {

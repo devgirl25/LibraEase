@@ -2,7 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'Signup_page_student.dart';
 import 'Forgot_password.dart';
-import 'Home_page.dart'; // Navigate here after login
+import '../studenthomepage/Home_page.dart'; // Navigate here after login
 import 'Select_user_type.dart'; // For back navigation
 
 class LoginStudentScreen extends StatefulWidget {

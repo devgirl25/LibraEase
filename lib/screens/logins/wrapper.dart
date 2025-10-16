@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'Home_page.dart';
+import '../studenthomepage/Home_page.dart';
 import 'login_page_student.dart' as Login;
 
 class Wrapper extends StatelessWidget {

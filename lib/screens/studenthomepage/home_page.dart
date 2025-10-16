@@ -4,7 +4,7 @@ import 'browse_books_page.dart';
 import 'Wishlist_page.dart';
 import 'notifications_page.dart';
 import 'Profile_page.dart';
-import 'Login_page_student.dart';
+import '../logins/login_page_student.dart';
 
 // --- CONSTANT COLORS ---
 const Color kPrimaryBrown = Color.fromARGB(255, 87, 36, 14);
@@ -57,7 +57,7 @@ class _HomePageState extends State<HomePage>
     Widget? nextPage;
     switch (index) {
       case 1:
-        nextPage = const NotificationsPage();
+        nextPage =  NotificationsPage();
         break;
       case 2:
         nextPage = const WishlistPage();
