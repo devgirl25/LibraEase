@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'browse_books_page.dart';
+import 'ebooks_page.dart';
+import 'borrow_history_page.dart';
+import 'registrations_page.dart';
+import 'previous_papers_page.dart';
 import 'Wishlist_page.dart';
 import 'notifications_page.dart';
 import 'Profile_page.dart';
@@ -116,17 +120,31 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _buildSearchBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: const TextField(
-        decoration: InputDecoration(
-          icon: Icon(Icons.search, color: kPrimaryBrown),
-          hintText: 'Search books or e-resources...',
-          border: InputBorder.none,
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const BrowseBooksPage()),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.search, color: kPrimaryBrown),
+            const SizedBox(width: 12),
+            Text(
+              'Search books or e-resources...',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 16,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -330,7 +348,13 @@ class _HomePageState extends State<HomePage>
                                   icon: Icons.menu_book_outlined,
                                   title: 'BROWSE\nE-BOOKS',
                                   backgroundIcon: Icons.book_online_sharp,
-                                  onTap: () => debugPrint('Browse E-Books'),
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (_) => const EBooksPage()),
+                                    );
+                                  },
                                 ),
                               ),
                               const SizedBox(width: 16),
@@ -363,8 +387,14 @@ class _HomePageState extends State<HomePage>
                                   icon: Icons.app_registration,
                                   title: 'REGISTRATIONS',
                                   backgroundIcon: Icons.edit_document,
-                                  onTap: () =>
-                                      debugPrint('Registrations Tapped'),
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (_) =>
+                                              const RegistrationsPage()),
+                                    );
+                                  },
                                 ),
                               ),
                               const SizedBox(width: 16),
@@ -374,8 +404,14 @@ class _HomePageState extends State<HomePage>
                                   icon: Icons.description_outlined,
                                   title: 'PREVIOUS\nYEAR PAPERS',
                                   backgroundIcon: Icons.find_in_page,
-                                  onTap: () =>
-                                      debugPrint('Previous Year Papers'),
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (_) =>
+                                              const PreviousPapersPage()),
+                                    );
+                                  },
                                 ),
                               ),
                             ],
@@ -387,7 +423,13 @@ class _HomePageState extends State<HomePage>
                             context: context,
                             icon: Icons.history,
                             title: 'BORROW HISTORY',
-                            onTap: () => debugPrint('Borrow History Tapped'),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const BorrowHistoryPage()),
+                              );
+                            },
                           ),
                           const SizedBox(height: 32),
 

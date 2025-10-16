@@ -26,10 +26,10 @@ class BorrowRecord {
     return BorrowRecord(
       id: doc.id,
       book: Book(
-        title: data['title'] ?? '',
-        author: data['author'] ?? '',
-        imagePath: data['imagePath'] ?? 'assets/images/book_placeholder.png',
-        tag: data['tag'] ?? '',
+        title: data['bookTitle'] ?? data['title'] ?? '',
+        author: data['author'] ?? 'Unknown Author',
+        imagePath: data['imageUrl'] ?? '',
+        tag: data['category'] ?? '',
       ),
       status: data['status'] == 'returned'
           ? BorrowStatus.returned
@@ -42,12 +42,13 @@ class BorrowRecord {
 
   Map<String, dynamic> toFirestore() {
     return {
-      'title': book.title,
+      'bookTitle': book.title,
       'author': book.author,
-      'imagePath': book.imagePath,
-      'tag': book.tag,
+      'imageUrl': book.imagePath,
+      'category': book.tag,
       'status': status == BorrowStatus.returned ? 'returned' : 'borrowed',
       'dueDate': dueDate,
+      'borrowDate': Timestamp.now(),
     };
   }
 }
@@ -83,49 +84,6 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
         .collection('users')
         .doc(user!.uid)
         .collection('borrow_history');
-
-    _addSampleDataIfEmpty();
-  }
-
-  Future<void> _addSampleDataIfEmpty() async {
-    final snapshot = await borrowHistoryRef.get();
-    if (snapshot.docs.isEmpty) {
-      final List<BorrowRecord> sampleRecords = [
-        BorrowRecord(
-          id: '1',
-          book: Book(
-              title: 'Software Engineering',
-              author: "By Brian D'Andrade",
-              imagePath: 'assets/images/book1.png',
-              tag: 'Computer'),
-          status: BorrowStatus.borrowed,
-          dueDate: DateTime(2025, 12, 25),
-        ),
-        BorrowRecord(
-          id: '2',
-          book: Book(
-              title: 'A Textbook of Engineering Drawing',
-              author: "By Brian D'Andrade",
-              imagePath: 'assets/images/book2.png',
-              tag: 'Computer'),
-          status: BorrowStatus.borrowed,
-          dueDate: DateTime(2025, 12, 25),
-        ),
-        BorrowRecord(
-          id: '3',
-          book: Book(
-              title: 'A Textbook of Engineering Physics',
-              author: "By Brian D'Andrade",
-              imagePath: 'assets/images/book3.png',
-              tag: 'Physics'),
-          status: BorrowStatus.returned,
-        ),
-      ];
-
-      for (var record in sampleRecords) {
-        await borrowHistoryRef.add(record.toFirestore());
-      }
-    }
   }
 
   @override
@@ -211,17 +169,25 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: Image.asset(
-                record.book.imagePath,
+              child: Container(
                 width: 80,
                 height: 110,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  width: 80,
-                  height: 110,
-                  color: Colors.grey[300],
-                  child: const Icon(Icons.book, color: Colors.grey),
-                ),
+                color: Colors.grey[300],
+                child: record.book.imagePath.isNotEmpty
+                    ? (record.book.imagePath.startsWith('http')
+                        ? Image.network(
+                            record.book.imagePath,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                const Icon(Icons.book, color: Colors.grey),
+                          )
+                        : Image.asset(
+                            record.book.imagePath,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                const Icon(Icons.book, color: Colors.grey),
+                          ))
+                    : const Icon(Icons.book, color: Colors.grey, size: 40),
               ),
             ),
             const SizedBox(width: 16),
@@ -253,12 +219,24 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
                         ElevatedButton(
                           onPressed: () async {
                             if (isReturned) {
-                              await borrowHistoryRef.add(record.toFirestore());
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'Please borrow the book from the browse page'),
+                                ),
+                              );
                             } else if (record.id.isNotEmpty) {
                               await borrowHistoryRef.doc(record.id).update({
                                 'dueDate':
-                                    DateTime.now().add(const Duration(days: 7))
+                                    DateTime.now().add(const Duration(days: 14))
                               });
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Book renewed successfully!'),
+                                  ),
+                                );
+                              }
                             }
                           },
                           style: ElevatedButton.styleFrom(
@@ -275,7 +253,13 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
                         ),
                         const SizedBox(width: 8),
                         OutlinedButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Review feature coming soon!'),
+                              ),
+                            );
+                          },
                           style: OutlinedButton.styleFrom(
                             foregroundColor: kPrimaryBrown,
                             side: BorderSide(

@@ -1,51 +1,86 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../logins/constants.dart';
 
-// A simple data model for an E-Book
-class EBook {
-  final String title;
-  final String author;
-  final String tag;
+class EBooksPage extends StatefulWidget {
+  const EBooksPage({super.key});
 
-  EBook({
-    required this.title,
-    required this.author,
-    required this.tag,
-  });
+  @override
+  State<EBooksPage> createState() => _EBooksPageState();
 }
 
-// Mock data for the list
-final List<EBook> ebooks = [
-  EBook(
-    title: 'Software Engineering',
-    author: 'By Dr. Mahesh M. Goyani',
-    tag: 'Computer',
-  ),
-  EBook(
-    title: 'A Textbook of Engineering Drawing',
-    author: 'By Dr. Mahesh M. Goyani',
-    tag: 'Computer',
-  ),
-  EBook(
-    title: 'A Textbook of Engineering Physics',
-    author: 'By Dr. Mahesh M. Goyani',
-    tag: 'Physics',
-  ),
-];
+class _EBooksPageState extends State<EBooksPage> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
-class EBooksPage extends StatelessWidget {
-  const EBooksPage({super.key});
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kScaffoldBackground,
       appBar: _buildAppBar(context),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemCount: ebooks.length,
-        itemBuilder: (context, index) {
-          return _buildEBookListItem(ebooks[index]);
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: FirebaseFirestore.instance
+            .collection('ebooks')
+            .orderBy('title')
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+
+          final docs = snapshot.data?.docs ?? [];
+
+          if (docs.isEmpty) {
+            return const Center(
+              child: Text(
+                'No e-books available',
+                style: TextStyle(color: kPrimaryBrown, fontSize: 16),
+              ),
+            );
+          }
+
+          final filteredDocs = docs.where((doc) {
+            final data = doc.data();
+            final title = (data['title'] ?? '').toString().toLowerCase();
+            final author = (data['author'] ?? '').toString().toLowerCase();
+            final query = _searchQuery.toLowerCase();
+            return title.contains(query) || author.contains(query);
+          }).toList();
+
+          if (filteredDocs.isEmpty) {
+            return const Center(
+              child: Text(
+                'No e-books found',
+                style: TextStyle(color: kPrimaryBrown, fontSize: 16),
+              ),
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16.0),
+            itemCount: filteredDocs.length,
+            itemBuilder: (context, index) {
+              final data = filteredDocs[index].data();
+              return EBookListItem(
+                ebookId: filteredDocs[index].id,
+                title: data['title'] ?? '',
+                author: data['author'] ?? '',
+                category: data['category'] ?? 'Unknown',
+                pdfUrl: data['pdfUrl'] ?? '',
+              );
+            },
+          );
         },
       ),
     );
@@ -53,8 +88,7 @@ class EBooksPage extends StatelessWidget {
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     return PreferredSize(
-      preferredSize:
-          const Size.fromHeight(140.0), // Taller AppBar for search bar
+      preferredSize: const Size.fromHeight(140.0),
       child: Container(
         decoration: const BoxDecoration(
           color: kPrimaryBrown,
@@ -63,7 +97,6 @@ class EBooksPage extends StatelessWidget {
         child: SafeArea(
           child: Column(
             children: [
-              // Title Row
               ListTile(
                 leading: IconButton(
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -78,7 +111,6 @@ class EBooksPage extends StatelessWidget {
                   ),
                 ),
               ),
-              // Search Bar
               Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -87,9 +119,15 @@ class EBooksPage extends StatelessWidget {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Search',
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) {
+                      setState(() {
+                        _searchQuery = value;
+                      });
+                    },
+                    decoration: const InputDecoration(
+                      hintText: 'Search e-books...',
                       prefixIcon: Icon(Icons.search, color: kPrimaryBrown),
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.symmetric(vertical: 14),
@@ -103,8 +141,83 @@ class EBooksPage extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildEBookListItem(EBook book) {
+class EBookListItem extends StatefulWidget {
+  final String ebookId;
+  final String title;
+  final String author;
+  final String category;
+  final String pdfUrl;
+
+  const EBookListItem({
+    super.key,
+    required this.ebookId,
+    required this.title,
+    required this.author,
+    required this.category,
+    required this.pdfUrl,
+  });
+
+  @override
+  State<EBookListItem> createState() => _EBookListItemState();
+}
+
+class _EBookListItemState extends State<EBookListItem> {
+  final user = FirebaseAuth.instance.currentUser;
+  bool isWishlisted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkWishlist();
+  }
+
+  Future<void> _checkWishlist() async {
+    if (user == null) return;
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user!.uid)
+        .collection('ebook_wishlist')
+        .doc(widget.ebookId)
+        .get();
+    if (doc.exists) setState(() => isWishlisted = true);
+  }
+
+  Future<void> _toggleWishlist() async {
+    if (user == null) return;
+    final wishlistRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user!.uid)
+        .collection('ebook_wishlist')
+        .doc(widget.ebookId);
+
+    if (isWishlisted) {
+      await wishlistRef.delete();
+      setState(() => isWishlisted = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Removed from Wishlist')));
+      }
+    } else {
+      await wishlistRef.set({
+        'ebookId': widget.ebookId,
+        'title': widget.title,
+        'author': widget.author,
+        'category': widget.category,
+        'pdfUrl': widget.pdfUrl,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      setState(() => isWishlisted = true);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('E-Book added to Wishlist')));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Container(
@@ -116,7 +229,6 @@ class EBooksPage extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Placeholder icon instead of image
             Container(
               width: 80,
               height: 110,
@@ -128,7 +240,6 @@ class EBooksPage extends StatelessWidget {
                   const Icon(Icons.menu_book, color: kPrimaryBrown, size: 40),
             ),
             const SizedBox(width: 16),
-            // Book Details
             Expanded(
               child: SizedBox(
                 height: 110,
@@ -136,12 +247,11 @@ class EBooksPage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Title and Author
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          book.title,
+                          widget.title,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -152,7 +262,9 @@ class EBooksPage extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          book.author,
+                          widget.author.isNotEmpty
+                              ? widget.author
+                              : 'Unknown author',
                           style: TextStyle(
                             fontSize: 12,
                             color: kPrimaryBrown.withOpacity(0.7),
@@ -160,11 +272,9 @@ class EBooksPage extends StatelessWidget {
                         ),
                       ],
                     ),
-                    // Tag, Button, and Icon
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Tag chip
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 4),
@@ -173,14 +283,25 @@ class EBooksPage extends StatelessWidget {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            book.tag,
+                            widget.category,
                             style: const TextStyle(
                                 fontSize: 10, color: kPrimaryBrown),
                           ),
                         ),
-                        // Read Now Button
                         ElevatedButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            if (widget.pdfUrl.isNotEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content: Text('Opening ${widget.title}...')),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('PDF not available')),
+                              );
+                            }
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: kPrimaryBrown,
                             foregroundColor: Colors.white,
@@ -194,9 +315,17 @@ class EBooksPage extends StatelessWidget {
                           child: const Text('Read Now',
                               style: TextStyle(fontSize: 12)),
                         ),
-                        // Bookmark Icon
-                        Icon(Icons.bookmark_border,
-                            color: kPrimaryBrown.withOpacity(0.7)),
+                        GestureDetector(
+                          onTap: _toggleWishlist,
+                          child: Icon(
+                            isWishlisted
+                                ? Icons.bookmark
+                                : Icons.bookmark_border,
+                            color: isWishlisted
+                                ? kPrimaryBrown
+                                : kPrimaryBrown.withOpacity(0.7),
+                          ),
+                        ),
                       ],
                     ),
                   ],

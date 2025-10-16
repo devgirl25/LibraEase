@@ -4,18 +4,79 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../logins/constants.dart';
 import 'book_page.dart';
 
-class BrowseBooksPage extends StatelessWidget {
+class BrowseBooksPage extends StatefulWidget {
   const BrowseBooksPage({super.key});
+
+  @override
+  State<BrowseBooksPage> createState() => _BrowseBooksPageState();
+}
+
+class _BrowseBooksPageState extends State<BrowseBooksPage> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kScaffoldBackground,
-      appBar: AppBar(
-        backgroundColor: kPrimaryBrown,
-        title:
-            const Text('Browse Books', style: TextStyle(color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(140.0),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: kPrimaryBrown,
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
+          ),
+          child: SafeArea(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  title: const Text(
+                    'Browse Books',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 22,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (value) {
+                        setState(() {
+                          _searchQuery = value;
+                        });
+                      },
+                      decoration: const InputDecoration(
+                        hintText: 'Search books...',
+                        prefixIcon: Icon(Icons.search, color: kPrimaryBrown),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: FirebaseFirestore.instance
@@ -31,15 +92,35 @@ class BrowseBooksPage extends StatelessWidget {
           }
 
           final docs = snapshot.data?.docs ?? [];
-          if (docs.isEmpty) return const Center(child: Text('No books found'));
+
+          if (docs.isEmpty) {
+            return const Center(child: Text('No books found'));
+          }
+
+          final filteredDocs = docs.where((doc) {
+            final data = doc.data();
+            final title = (data['title'] ?? '').toString().toLowerCase();
+            final author = (data['author'] ?? '').toString().toLowerCase();
+            final query = _searchQuery.toLowerCase();
+            return title.contains(query) || author.contains(query);
+          }).toList();
+
+          if (filteredDocs.isEmpty) {
+            return const Center(
+              child: Text(
+                'No books found',
+                style: TextStyle(color: kPrimaryBrown, fontSize: 16),
+              ),
+            );
+          }
 
           return ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: docs.length,
+            itemCount: filteredDocs.length,
             itemBuilder: (context, index) {
-              final data = docs[index].data();
+              final data = filteredDocs[index].data();
               return BookListItem(
-                bookId: docs[index].id,
+                bookId: filteredDocs[index].id,
                 title: data['title'] ?? '',
                 author: data['author'] ?? '',
                 description: data['description'] ?? '',
@@ -138,11 +219,11 @@ class _BookListItemState extends State<BookListItem> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => BookPage(
+              builder: (_) => BookDetailPage(
                 bookId: widget.bookId,
                 title: widget.title,
                 author: widget.author,
-                description: widget.description,
+                description: widget.description ?? '',
                 imageUrl: widget.imageUrl,
                 category: widget.category,
                 available: widget.available,

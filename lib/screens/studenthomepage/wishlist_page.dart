@@ -191,11 +191,11 @@ class _WishlistItemState extends State<WishlistItem> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => BookPage(
+              builder: (_) => BookDetailPage(
                 bookId: widget.bookId,
                 title: widget.title,
                 author: widget.author,
-                description: widget.description,
+                description: widget.description ?? '',
                 imageUrl: widget.imageUrl,
                 category: widget.category,
                 available: widget.available,
