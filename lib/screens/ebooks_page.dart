@@ -1,5 +1,3 @@
-// lib/ebooks_page.dart
-
 import 'package:flutter/material.dart';
 import 'constants.dart';
 
@@ -7,13 +5,11 @@ import 'constants.dart';
 class EBook {
   final String title;
   final String author;
-  final String imagePath;
   final String tag;
 
   EBook({
     required this.title,
     required this.author,
-    required this.imagePath,
     required this.tag,
   });
 }
@@ -23,19 +19,16 @@ final List<EBook> ebooks = [
   EBook(
     title: 'Software Engineering',
     author: 'By Dr. Mahesh M. Goyani',
-    imagePath: 'assets/images/book1.png',
     tag: 'Computer',
   ),
   EBook(
     title: 'A Textbook of Engineering Drawing',
     author: 'By Dr. Mahesh M. Goyani',
-    imagePath: 'assets/images/book2.png',
     tag: 'Computer',
   ),
   EBook(
     title: 'A Textbook of Engineering Physics',
     author: 'By Dr. Mahesh M. Goyani',
-    imagePath: 'assets/images/book3.png',
     tag: 'Physics',
   ),
 ];
@@ -60,7 +53,8 @@ class EBooksPage extends StatelessWidget {
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     return PreferredSize(
-      preferredSize: const Size.fromHeight(140.0), // Increased height for search bar
+      preferredSize:
+          const Size.fromHeight(140.0), // Taller AppBar for search bar
       child: Container(
         decoration: const BoxDecoration(
           color: kPrimaryBrown,
@@ -86,7 +80,8 @@ class EBooksPage extends StatelessWidget {
               ),
               // Search Bar
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 child: Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -119,22 +114,18 @@ class EBooksPage extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Book Cover Image
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Image.asset(
-                book.imagePath,
-                width: 80,
-                height: 110,
-                fit: BoxFit.cover,
-                 errorBuilder: (context, error, stackTrace) => Container(
-                  width: 80,
-                  height: 110,
-                  color: Colors.grey[300],
-                  child: const Icon(Icons.book, color: Colors.grey),
-                ),
+            // Placeholder icon instead of image
+            Container(
+              width: 80,
+              height: 110,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(10),
               ),
+              child:
+                  const Icon(Icons.menu_book, color: kPrimaryBrown, size: 40),
             ),
             const SizedBox(width: 16),
             // Book Details
@@ -173,14 +164,19 @@ class EBooksPage extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Chip
+                        // Tag chip
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: const Color(0xFFD7CCC8),
-                            borderRadius: BorderRadius.circular(8)
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Text(book.tag, style: const TextStyle(fontSize: 10, color: kPrimaryBrown)),
+                          child: Text(
+                            book.tag,
+                            style: const TextStyle(
+                                fontSize: 10, color: kPrimaryBrown),
+                          ),
                         ),
                         // Read Now Button
                         ElevatedButton(
@@ -188,20 +184,25 @@ class EBooksPage extends StatelessWidget {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: kPrimaryBrown,
                             foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            minimumSize: const Size(0, 30)
+                            minimumSize: const Size(0, 30),
                           ),
-                          child: const Text('Read Now', style: TextStyle(fontSize: 12)),
+                          child: const Text('Read Now',
+                              style: TextStyle(fontSize: 12)),
                         ),
-                        Icon(Icons.bookmark_border, color: kPrimaryBrown.withOpacity(0.7)),
+                        // Bookmark Icon
+                        Icon(Icons.bookmark_border,
+                            color: kPrimaryBrown.withOpacity(0.7)),
                       ],
-                    )
+                    ),
                   ],
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),

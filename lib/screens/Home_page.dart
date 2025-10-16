@@ -1,46 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'browse_books_page.dart';
+import 'Wishlist_page.dart';
+import 'notifications_page.dart';
+import 'Profile_page.dart';
+import 'Login_page_student.dart';
 
 // --- CONSTANT COLORS ---
 const Color kPrimaryBrown = Color.fromARGB(255, 87, 36, 14);
 const Color kLightCream = Color.fromARGB(255, 245, 235, 220);
 const Color kScaffoldBackground = Color.fromARGB(255, 210, 189, 166);
-
-// --- MOCK NAVIGATION PAGES ---
-class NotificationsPage extends StatelessWidget {
-  const NotificationsPage({super.key});
-  @override
-  Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(title: Text('Notifications')),
-      body: Center(child: Text('Notifications Content')));
-}
-
-class WishlistPage extends StatelessWidget {
-  const WishlistPage({super.key});
-  @override
-  Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(title: Text('Wishlist/Bookmarks')),
-      body: Center(child: Text('Wishlist Content')));
-}
-
-class ProfilePage extends StatelessWidget {
-  const ProfilePage({super.key});
-  @override
-  Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(title: Text('Profile')),
-      body: Center(child: Text('Profile Content')));
-}
-
-class LoginStudentScreen extends StatelessWidget {
-  const LoginStudentScreen({super.key});
-  @override
-  Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(title: Text('Login Screen Mock')),
-      body: Center(child: Text('Returned to Login.')));
-}
-
-// -----------------------------------------------------------
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
