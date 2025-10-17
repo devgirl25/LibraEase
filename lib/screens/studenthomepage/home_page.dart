@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'browse_books_page.dart';
 import 'ebooks_page.dart';
 import 'borrow_history_page.dart';
@@ -9,6 +10,7 @@ import 'Wishlist_page.dart';
 import 'notifications_page.dart';
 import 'Profile_page.dart';
 import '../logins/login_page_student.dart';
+import '../../services/notification_manager.dart';
 
 // --- CONSTANT COLORS ---
 const Color kPrimaryBrown = Color.fromARGB(255, 87, 36, 14);
@@ -30,6 +32,8 @@ class _HomePageState extends State<HomePage>
   int _selectedIndex = 0;
   bool _isNavigating = false;
   final User? user = FirebaseAuth.instance.currentUser;
+  int _unreadNotificationCount = 0;
+  final NotificationManager _notificationManager = NotificationManager();
 
   // Reduced image path for brevity, assuming it's correct
   final AssetImage backgroundImage =
@@ -42,6 +46,37 @@ class _HomePageState extends State<HomePage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       precacheImage(backgroundImage, context);
     });
+    _loadUnreadCount();
+    _listenToNotifications();
+  }
+
+  void _loadUnreadCount() async {
+    if (user != null) {
+      final count = await _notificationManager.getUnreadNotificationCount(user!.uid);
+      if (mounted) {
+        setState(() {
+          _unreadNotificationCount = count;
+        });
+      }
+    }
+  }
+
+  void _listenToNotifications() {
+    if (user != null) {
+      FirebaseFirestore.instance
+          .collection('users')
+          .doc(user!.uid)
+          .collection('notifications')
+          .where('read', isEqualTo: false)
+          .snapshots()
+          .listen((snapshot) {
+        if (mounted) {
+          setState(() {
+            _unreadNotificationCount = snapshot.docs.length;
+          });
+        }
+      });
+    }
   }
 
   void _signOut(BuildContext context) async {
@@ -324,15 +359,50 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _buildNavItem(IconData icon, int index) {
-    return IconButton(
-      icon: Icon(
-        icon,
-        color: _selectedIndex == index
-            ? kLightCream // White is a better highlight
-            : kLightCream.withOpacity(0.6),
-        size: 30, // Slightly larger icon
-      ),
-      onPressed: () => _onItemTapped(index),
+    final isNotificationIcon = index == 1;
+    final showBadge = isNotificationIcon && _unreadNotificationCount > 0;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        IconButton(
+          icon: Icon(
+            icon,
+            color: _selectedIndex == index
+                ? kLightCream
+                : kLightCream.withOpacity(0.6),
+            size: 30,
+          ),
+          onPressed: () => _onItemTapped(index),
+        ),
+        if (showBadge)
+          Positioned(
+            right: 8,
+            top: 8,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
+              constraints: const BoxConstraints(
+                minWidth: 18,
+                minHeight: 18,
+              ),
+              child: Text(
+                _unreadNotificationCount > 99
+                    ? '99+'
+                    : _unreadNotificationCount.toString(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
     );
   }
 

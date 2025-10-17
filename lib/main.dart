@@ -2,17 +2,18 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'screens/logins/splash_screen.dart';
 import 'package:get/get.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // ✅ Firestore import
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'services/notification_scheduler.dart';
 
-// ✅ Global Firestore instance
 late FirebaseFirestore db;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
 
-  // ✅ Initialize Firestore
   db = FirebaseFirestore.instance;
+
+  NotificationScheduler().startScheduler();
 
   runApp(const MyApp());
 }

@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'notification_manager.dart';
 
 class BorrowService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final NotificationManager _notificationManager = NotificationManager();
 
   /// Borrow a book
   Future<void> borrowBook({
@@ -40,17 +42,12 @@ class BorrowService {
     });
 
     // 3. Send notification
-    await _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('notifications')
-        .add({
-      'title': 'Book Borrowed',
-      'message':
-          'You have borrowed "$bookTitle". Due on ${dueDate.toLocal().toString().split(' ')[0]}.',
-      'timestamp': Timestamp.now(),
-      'read': false,
-    });
+    await _notificationManager.sendBorrowSuccessNotification(
+      userId: userId,
+      bookTitle: bookTitle,
+      borrowDate: now,
+      dueDate: dueDate,
+    );
   }
 
   /// Renew a book
@@ -76,17 +73,12 @@ class BorrowService {
       await doc.reference.update({'dueDate': newDueDate});
 
       // 2. Send notification
-      await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('notifications')
-          .add({
-        'title': 'Book Renewed',
-        'message':
-            '"$bookTitle" has been renewed. New due date: ${newDueDate.toLocal().toString().split(' ')[0]}.',
-        'timestamp': Timestamp.now(),
-        'read': false,
-      });
+      await _notificationManager.sendBookRenewedNotification(
+        userId: userId,
+        bookTitle: bookTitle,
+        oldDueDate: oldDueDate,
+        newDueDate: newDueDate,
+      );
     }
   }
 
@@ -96,19 +88,46 @@ class BorrowService {
     required String bookTitle,
     required DateTime dueDate,
   }) async {
-    final now = DateTime.now();
-    if (now.isAfter(dueDate)) {
-      await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('notifications')
-          .add({
-        'title': 'Overdue Notice',
-        'message':
-            'Please return "$bookTitle". It was due on ${dueDate.toLocal().toString().split(' ')[0]}.',
-        'timestamp': Timestamp.now(),
-        'read': false,
+    await _notificationManager.sendOverdueNotification(
+      userId: userId,
+      bookTitle: bookTitle,
+      dueDate: dueDate,
+    );
+  }
+
+  /// Return a book
+  Future<void> returnBook({
+    required String userId,
+    required String bookId,
+    required String bookTitle,
+  }) async {
+    // 1. Update borrow_history
+    final historyRef = _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('borrow_history')
+        .where('bookId', isEqualTo: bookId)
+        .where('status', isEqualTo: 'borrowed');
+
+    final snapshot = await historyRef.get();
+    if (snapshot.docs.isNotEmpty) {
+      final doc = snapshot.docs.first;
+      await doc.reference.update({
+        'status': 'returned',
+        'returnDate': DateTime.now(),
       });
+
+      // 2. Update book availability
+      await _firestore.collection('books').doc(bookId).update({
+        'available': true,
+      });
+
+      // 3. Send notification
+      await _notificationManager.sendBookReturnedNotification(
+        userId: userId,
+        bookTitle: bookTitle,
+        returnDate: DateTime.now(),
+      );
     }
   }
 }
