@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:libra/screens/adminhomepage/manageregpage.dart';
 import '../widgets/dashboardcard.dart';
 import '../screens/adminhomepage/add_book_page.dart';
 import '../screens/adminhomepage/borrow_request_page.dart';
 import '../screens/adminhomepage/listoverduebook.dart';
-import '../screens/adminhomepage/registration_requests_page.dart';
+//import '../screens/adminhomepage/registration_requests_page.dart';
 
 class DashboardGrid extends StatelessWidget {
   const DashboardGrid({super.key});
@@ -170,7 +171,7 @@ StreamBuilder<QuerySnapshot>(
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (_) => const RegistrationRequestsPage()),
+                        builder: (_) => const ManageRegRequestsPage()),
                   );
                 },
               ),

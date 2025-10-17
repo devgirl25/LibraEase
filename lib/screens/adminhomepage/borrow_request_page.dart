@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../logins/constants.dart';
+import 'managerequest.dart';
 
 class BorrowRequestsPage extends StatelessWidget {
   const BorrowRequestsPage({super.key});
 
   bool isAdmin(String? uid) {
-    // Replace with your admin UID check or Firestore admins collection
     return uid == "ZZZA4GmfBlV6ZlYuL4Y84vVuui42";
   }
 
@@ -19,11 +19,56 @@ class BorrowRequestsPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text("Borrow Requests"),
         backgroundColor: kPrimaryBrown,
+        actions: [
+          if (isAdmin(user?.uid))
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('borrow_requests')
+                  .where('status', isEqualTo: 'pending')
+                  .snapshots(),
+              builder: (context, snapshot) {
+                int pendingCount = 0;
+                if (snapshot.hasData) pendingCount = snapshot.data!.docs.length;
+
+                return Padding(
+                  padding: const EdgeInsets.only(right: 16.0),
+                  child: Center(
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        const Icon(Icons.notifications),
+                        if (pendingCount > 0)
+                          Positioned(
+                            right: 0,
+                            top: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                '$pendingCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+        ],
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('borrow_requests')
-            .orderBy('timestamp', descending: true)
+            .orderBy('requestedAt', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -58,43 +103,22 @@ class BorrowRequestsPage extends StatelessWidget {
                                 ? Colors.red
                                 : Colors.orange),
                   ),
-                  trailing: isRequestAdmin && status == "pending"
-                      ? Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon:
-                                  const Icon(Icons.check, color: Colors.green),
-                              onPressed: () async {
-                                // Accept request
-                                await FirebaseFirestore.instance
-                                    .collection('borrow_requests')
-                                    .doc(requestId)
-                                    .update({'status': 'accepted'});
-
-                                // Update book availability
-                                await FirebaseFirestore.instance
-                                    .collection('books')
-                                    .doc(data['bookId'])
-                                    .update({'available': false});
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.close, color: Colors.red),
-                              onPressed: () async {
-                                // Reject request
-                                await FirebaseFirestore.instance
-                                    .collection('borrow_requests')
-                                    .doc(requestId)
-                                    .update({'status': 'rejected'});
-                              },
-                            ),
-                          ],
+                  trailing: isRequestAdmin
+                      ? TextButton(
+                          child: const Text("Manage"),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ManageRequestPage(
+                                  requestId: requestId,
+                                  requestData: data,
+                                ),
+                              ),
+                            );
+                          },
                         )
                       : null,
-                  onTap: () {
-                    // Optional: navigate to BookPage
-                  },
                 ),
               );
             },

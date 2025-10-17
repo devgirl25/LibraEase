@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:libra/screens/adminhomepage/manageregpage.dart';
 import '../../widgets/dashboardcard.dart';
 import 'add_book_page.dart';
+import 'borrow_request_page.dart'; // import the borrow requests page
+//import 'registration_requests_page.dart';
 
 class DashboardGrid extends StatelessWidget {
   const DashboardGrid({super.key});
@@ -16,18 +19,18 @@ class DashboardGrid extends StatelessWidget {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         children: [
-          // ✅ Members card with dynamic count from Firestore users collection
+          // ✅ Members card
           StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             stream: FirebaseFirestore.instance
                 .collection('users')
-                // .where('role', isEqualTo: 'student') // uncomment to count only students
+                //.where('role', isEqualTo: 'student') // optional filter
                 .snapshots(),
             builder: (context, snapshot) {
               String countText = "0";
               if (snapshot.connectionState == ConnectionState.waiting) {
                 countText = "...";
               } else if (snapshot.hasError) {
-                countText = "0"; // fallback on error
+                countText = "0";
               } else if (snapshot.hasData) {
                 countText = snapshot.data!.docs.length.toString();
               }
@@ -43,12 +46,11 @@ class DashboardGrid extends StatelessWidget {
             },
           ),
 
-          // ✅ Books card with dynamic count
+          // ✅ Books card
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance.collection('books').snapshots(),
             builder: (context, snapshot) {
               String countText = "0";
-
               if (snapshot.hasData) {
                 countText = snapshot.data!.docs.length.toString();
               } else if (snapshot.hasError) {
@@ -70,17 +72,17 @@ class DashboardGrid extends StatelessWidget {
             },
           ),
 
+          // ✅ Borrow Requests card
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('borrow_requests')
                 .snapshots(),
             builder: (context, snapshot) {
               String countText = "0";
-
               if (snapshot.connectionState == ConnectionState.waiting) {
-                countText = "..."; // loading
+                countText = "...";
               } else if (snapshot.hasError) {
-                countText = "Err"; // error
+                countText = "Err";
               } else if (snapshot.hasData) {
                 countText = snapshot.data!.docs.length.toString();
               }
@@ -91,26 +93,58 @@ class DashboardGrid extends StatelessWidget {
                 icon: Icons.download_for_offline,
                 onTap: () {
                   // Navigate to Borrow Requests Page
-                  // e.g., Navigator.push(context, MaterialPageRoute(builder: (_) => BorrowRequestsPage()));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const BorrowRequestsPage(),
+                    ),
+                  );
                 },
               );
             },
           ),
 
+          // ✅ Overdue Books card
           DashboardCard(
-            value: "09",
+            value: "09", // You can later replace with dynamic count
             title: "OVERDUE BOOKS",
             icon: Icons.upload,
             onTap: () {
               // Navigate to Overdue Books Page
             },
           ),
-          DashboardCard(
-            value: "",
-            title: "REGISTRATION REQUESTS",
-            icon: Icons.person_add,
-            onTap: () {
-              // Navigate to Registration Requests Page
+
+          // ✅ Registration Requests card
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('registration_requests')
+                .where('status', isEqualTo: 'pending') // only pending
+                .snapshots(),
+            builder: (context, snapshot) {
+              String countText = "0";
+
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                countText = "...";
+              } else if (snapshot.hasError) {
+                countText = "Err";
+              } else if (snapshot.hasData) {
+                countText = snapshot.data!.docs.length.toString();
+              }
+
+              return DashboardCard(
+                value: countText,
+                title: "REGISTRATION REQUESTS",
+                icon: Icons.person_add,
+                onTap: () {
+                  // Navigate to the Registration Requests Page
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ManageRegRequestsPage(),
+                    ),
+                  );
+                },
+              );
             },
           ),
         ],

@@ -1,8 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../services/borrow_service.dart';
-import '../logins/constants.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'wishlist_page.dart'; // Make sure the path is correct
+
+const Color kPrimaryBrown = Color.fromARGB(255, 87, 36, 14);
+const Color kLightCream = Color.fromARGB(255, 245, 235, 220);
 
 class BookDetailPage extends StatefulWidget {
   final String bookId;
@@ -11,7 +13,6 @@ class BookDetailPage extends StatefulWidget {
   final String description;
   final String imageUrl;
   final String category;
-
   final bool available;
 
   const BookDetailPage({
@@ -26,306 +27,261 @@ class BookDetailPage extends StatefulWidget {
   });
 
   @override
-  State<BookPage> createState() => _BookPageState();
+  State<BookDetailPage> createState() => _BookDetailPageState();
 }
 
 class _BookDetailPageState extends State<BookDetailPage> {
-  final BorrowService _borrowService = BorrowService();
-  final String _userId = FirebaseAuth.instance.currentUser!.uid;
-  bool _isBorrowed = false;
-  DateTime? _dueDate;
-  bool _isLoading = false;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  bool isInWishlist = false;
+  bool isBorrowing = false;
 
   @override
   void initState() {
     super.initState();
-    _checkBorrowStatus();
+    _checkWishlistStatus();
   }
 
-  Future<void> _checkBorrowStatus() async {
-    final snapshot = await FirebaseFirestore.instance
+  Future<void> _checkWishlistStatus() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    final doc = await _firestore
         .collection('users')
-        .doc(_userId)
-        .collection('borrow_history')
-        .where('bookId', isEqualTo: widget.bookId)
-        .where('status', isEqualTo: 'borrowed')
+        .doc(user.uid)
+        .collection('wishlist')
+        .doc(widget.bookId)
         .get();
 
-    if (snapshot.docs.isNotEmpty) {
-      setState(() {
-        _isBorrowed = true;
-        _dueDate = (snapshot.docs.first['dueDate'] as Timestamp).toDate();
-      });
+    setState(() {
+      isInWishlist = doc.exists;
+    });
+  }
+
+  Future<void> _toggleWishlist() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to use wishlist')),
+      );
+      return;
     }
+
+    final wishlistRef = _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('wishlist')
+        .doc(widget.bookId);
+
+    if (isInWishlist) {
+      await wishlistRef.delete();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Removed from Wishlist')),
+      );
+    } else {
+      await wishlistRef.set({
+        'bookId': widget.bookId,
+        'title': widget.title,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Added to Wishlist')),
+      );
+    }
+
+    setState(() => isInWishlist = !isInWishlist);
   }
 
-  Future<void> _borrowBook() async {
-    setState(() => _isLoading = true);
-    await _borrowService.borrowBook(
-        bookId: widget.bookId,
-        bookTitle: widget.title,
-        userId: _userId,
-        borrowDays: 14);
-    setState(() {
-      _isBorrowed = true;
-      _dueDate = DateTime.now().add(const Duration(days: 14));
-      _isLoading = false;
-    });
-  }
+  Future<void> _sendBorrowRequest() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to borrow a book')),
+      );
+      return;
+    }
 
-  Future<void> _renewBook() async {
-    if (_dueDate == null) return;
-    setState(() => _isLoading = true);
-    await _borrowService.renewBook(
-        userId: _userId,
-        bookId: widget.bookId,
-        bookTitle: widget.title,
-        extendDays: 14);
-    setState(() {
-      _dueDate = _dueDate!.add(const Duration(days: 14));
-      _isLoading = false;
-    });
+    if (!widget.available) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This book is not available right now')),
+      );
+      return;
+    }
+
+    setState(() => isBorrowing = true);
+
+    try {
+      final now = DateTime.now();
+      final dueDate = now.add(const Duration(days: 14));
+
+      await _firestore.collection('borrow_requests').add({
+        'bookId': widget.bookId,
+        'bookTitle': widget.title,
+        'userId': user.uid,
+        'status': 'pending',
+        'requestedAt': FieldValue.serverTimestamp(),
+        'dueDate': dueDate.toIso8601String(),
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Borrow request sent successfully!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to send request: $e')),
+      );
+    } finally {
+      setState(() => isBorrowing = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<DocumentSnapshot>(
-        stream:
-            FirebaseFirestore.instance.collection('books').doc(widget.bookId).snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Scaffold(
-              backgroundColor: kScaffoldBackground,
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-          final bookData = snapshot.data!;
-          final available = bookData['available'] ?? false;
+    return Scaffold(
+      backgroundColor: kLightCream,
+      appBar: AppBar(
+        title: Text(widget.title),
+        backgroundColor: kPrimaryBrown,
+        foregroundColor: Colors.white,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Book image
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: widget.imageUrl.isNotEmpty
+                        ? Image.network(
+                            widget.imageUrl,
+                            height: 250,
+                            width: 180,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(Icons.book,
+                                size: 150, color: kPrimaryBrown),
+                          )
+                        : const Icon(
+                            Icons.book,
+                            size: 150,
+                            color: kPrimaryBrown,
+                          ),
+                  ),
+                  const SizedBox(width: 12),
 
-          return Scaffold(
-            backgroundColor: kScaffoldBackground,
-            appBar: AppBar(
-              title: Text(widget.title, style: const TextStyle(color: Colors.white)),
-              backgroundColor: kPrimaryBrown,
-              iconTheme: const IconThemeData(color: Colors.white),
+                  // Heart icon
+                  GestureDetector(
+                    onTap: _toggleWishlist,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      transitionBuilder: (child, animation) =>
+                          ScaleTransition(scale: animation, child: child),
+                      child: Icon(
+                        isInWishlist ? Icons.favorite : Icons.favorite_border,
+                        key: ValueKey(isInWishlist),
+                        color: isInWishlist ? Colors.red : Colors.grey[700],
+                        size: 40,
+                        shadows: const [
+                          Shadow(
+                            color: Colors.black38,
+                            blurRadius: 4,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            body: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(15),
-                        child: widget.imageUrl.isNotEmpty
-                            ? (widget.imageUrl.startsWith('http')
-                                ? Image.network(
-                                    widget.imageUrl,
-                                    height: 250,
-                                    width: 180,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Container(
-                                      height: 250,
-                                      width: 180,
-                                      color: Colors.grey[300],
-                                      child: const Icon(Icons.book, size: 60),
-                                    ),
-                                  )
-                                : Image.asset(
-                                    widget.imageUrl,
-                                    height: 250,
-                                    width: 180,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Container(
-                                      height: 250,
-                                      width: 180,
-                                      color: Colors.grey[300],
-                                      child: const Icon(Icons.book, size: 60),
-                                    ),
-                                  ))
-                            : Container(
-                                height: 250,
-                                width: 180,
-                                color: Colors.grey[300],
-                                child: const Icon(Icons.book, size: 60),
-                              ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      widget.title,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: kPrimaryBrown,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'by ${widget.author}',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: kPrimaryBrown.withOpacity(0.7),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: kPrimaryBrown.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            widget.category,
-                            style: const TextStyle(
-                              color: kPrimaryBrown,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: available
-                                ? Colors.green[100]
-                                : Colors.red[100],
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            available ? 'Available' : 'Not Available',
-                            style: TextStyle(
-                              color: available
-                                  ? Colors.green[800]
-                                  : Colors.red[800],
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Description',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: kPrimaryBrown,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      widget.description.isNotEmpty
-                          ? widget.description
-                          : 'No description available.',
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: kPrimaryBrown.withOpacity(0.8),
-                        height: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    if (_isBorrowed && _dueDate != null)
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: _dueDate!.isBefore(DateTime.now())
-                              ? Colors.red[50]
-                              : Colors.green[50],
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: _dueDate!.isBefore(DateTime.now())
-                                ? Colors.red[300]!
-                                : Colors.green[300]!,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              _dueDate!.isBefore(DateTime.now())
-                                  ? Icons.warning_rounded
-                                  : Icons.check_circle_rounded,
-                              color: _dueDate!.isBefore(DateTime.now())
-                                  ? Colors.red[700]
-                                  : Colors.green[700],
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _dueDate!.isBefore(DateTime.now())
-                                        ? 'Overdue!'
-                                        : 'Currently Borrowed',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: _dueDate!.isBefore(DateTime.now())
-                                          ? Colors.red[700]
-                                          : Colors.green[700],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Due: ${_dueDate!.toLocal().toString().split(' ')[0]}',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: _dueDate!.isBefore(DateTime.now())
-                                          ? Colors.red[600]
-                                          : Colors.green[600],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: available && !_isLoading
-                            ? () {
-                                _isBorrowed ? _renewBook() : _borrowBook();
-                              }
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: kPrimaryBrown,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : Text(
-                                _isBorrowed ? 'Renew Book' : 'Borrow Book',
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                      ),
-                    ),
-                  ],
+            const SizedBox(height: 20),
+            Text(
+              widget.title,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: kPrimaryBrown,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'by ${widget.author}',
+              style: const TextStyle(
+                  fontSize: 18,
+                  fontStyle: FontStyle.italic,
+                  color: Colors.brown),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Icons.category, color: kPrimaryBrown),
+                const SizedBox(width: 8),
+                Text(widget.category, style: const TextStyle(fontSize: 16)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Icons.info, color: kPrimaryBrown),
+                const SizedBox(width: 8),
+                Text(
+                  widget.available ? 'Available' : 'Not Available',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: widget.available ? Colors.green : Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 30, thickness: 1.5),
+            const Text(
+              'Description',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: kPrimaryBrown,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              widget.description,
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.black87,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 30),
+
+            // Borrow button
+            Center(
+              child: ElevatedButton.icon(
+                onPressed: isBorrowing ? null : _sendBorrowRequest,
+                icon: const Icon(Icons.bookmark_add, color: Colors.white),
+                label: Text(
+                  isBorrowing ? 'Requesting...' : 'Borrow This Book',
+                  style: const TextStyle(fontSize: 18, color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: kPrimaryBrown,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
-          );
-        });
+          ],
+        ),
+      ),
+    );
   }
 }

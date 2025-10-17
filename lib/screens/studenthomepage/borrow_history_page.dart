@@ -3,20 +3,27 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../logins/constants.dart';
-import 'book_list_page.dart';
 
-// Enum for book status
+// --- Enum for borrow status ---
 enum BorrowStatus { borrowed, returned }
 
 class BorrowRecord {
   final String id;
-  final Book book;
+  final String bookId;
+  final String title;
+  final String author;
+  final String imageUrl;
+  final String category;
   final BorrowStatus status;
   final DateTime? dueDate;
 
   BorrowRecord({
     required this.id,
-    required this.book,
+    required this.bookId,
+    required this.title,
+    required this.author,
+    required this.imageUrl,
+    required this.category,
     required this.status,
     this.dueDate,
   });
@@ -25,31 +32,18 @@ class BorrowRecord {
     final data = doc.data() as Map<String, dynamic>;
     return BorrowRecord(
       id: doc.id,
-      book: Book(
-        title: data['bookTitle'] ?? data['title'] ?? '',
-        author: data['author'] ?? 'Unknown Author',
-        imagePath: data['imageUrl'] ?? '',
-        tag: data['category'] ?? '',
-      ),
-      status: data['status'] == 'returned'
+      bookId: data['bookId'] ?? '',
+      title: data['bookTitle'] ?? data['title'] ?? 'Untitled',
+      author: data['author'] ?? 'Unknown Author',
+      imageUrl: data['imageUrl'] ?? '',
+      category: data['category'] ?? 'General',
+      status: (data['status'] == 'returned')
           ? BorrowStatus.returned
           : BorrowStatus.borrowed,
       dueDate: data['dueDate'] != null
           ? (data['dueDate'] as Timestamp).toDate()
           : null,
     );
-  }
-
-  Map<String, dynamic> toFirestore() {
-    return {
-      'bookTitle': book.title,
-      'author': book.author,
-      'imageUrl': book.imagePath,
-      'category': book.tag,
-      'status': status == BorrowStatus.returned ? 'returned' : 'borrowed',
-      'dueDate': dueDate,
-      'borrowDate': Timestamp.now(),
-    };
   }
 }
 
@@ -61,47 +55,42 @@ class BorrowHistoryPage extends StatefulWidget {
 }
 
 class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
-  late final User? user;
-  late final CollectionReference borrowHistoryRef;
+  final _firestore = FirebaseFirestore.instance;
+  final _auth = FirebaseAuth.instance;
+  User? user;
 
   @override
   void initState() {
     super.initState();
-    user = FirebaseAuth.instance.currentUser;
-
-    if (user == null) {
-      // If no user is logged in, show an error or redirect
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Please log in to view your history")),
-        );
-        Navigator.of(context).pop();
-      });
-      return;
-    }
-
-    borrowHistoryRef = FirebaseFirestore.instance
-        .collection('users')
-        .doc(user!.uid)
-        .collection('borrow_history');
+    user = _auth.currentUser;
   }
 
   @override
   Widget build(BuildContext context) {
     if (user == null) {
       return const Scaffold(
-        body: Center(child: Text("Not logged in")),
+        body: Center(child: Text("Please log in to view your history.")),
       );
     }
 
     return Scaffold(
       backgroundColor: kScaffoldBackground,
-      appBar: _buildAppBar(context),
+      appBar: _buildAppBar(),
       body: StreamBuilder<QuerySnapshot>(
-        stream: borrowHistoryRef.snapshots(),
+        stream: _firestore
+            .collection('borrow_requests')
+            .where('userId', isEqualTo: user!.uid)
+            .where('status', whereIn: ['accepted', 'returned'])
+            .orderBy('borrowDate', descending: true)
+            .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+                child: CircularProgressIndicator(color: kPrimaryBrown));
+          }
+
+          if (snapshot.hasError) {
+            return const Center(child: Text('Error loading borrow history.'));
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -116,7 +105,7 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
             padding: const EdgeInsets.all(16.0),
             itemCount: records.length,
             itemBuilder: (context, index) {
-              return _buildHistoryItemCard(records[index]);
+              return _buildHistoryCard(records[index]);
             },
           );
         },
@@ -124,7 +113,7 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
+  PreferredSizeWidget _buildAppBar() {
     return PreferredSize(
       preferredSize: const Size.fromHeight(80.0),
       child: Container(
@@ -154,11 +143,11 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
     );
   }
 
-  Widget _buildHistoryItemCard(BorrowRecord record) {
-    final bool isReturned = record.status == BorrowStatus.returned;
+  Widget _buildHistoryCard(BorrowRecord record) {
+    final isReturned = record.status == BorrowStatus.returned;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
+      padding: const EdgeInsets.only(bottom: 16),
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -166,40 +155,19 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
-                width: 80,
-                height: 110,
-                color: Colors.grey[300],
-                child: record.book.imagePath.isNotEmpty
-                    ? (record.book.imagePath.startsWith('http')
-                        ? Image.network(
-                            record.book.imagePath,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                const Icon(Icons.book, color: Colors.grey),
-                          )
-                        : Image.asset(
-                            record.book.imagePath,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                const Icon(Icons.book, color: Colors.grey),
-                          ))
-                    : const Icon(Icons.book, color: Colors.grey, size: 40),
-              ),
-            ),
+            _buildBookImage(record.imageUrl),
             const SizedBox(width: 16),
             Expanded(
               child: SizedBox(
-                height: 110,
+                height: 120,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     Text(
-                      record.book.title,
+                      record.title,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -207,9 +175,9 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
                       ),
                     ),
                     Text(
-                      record.book.author,
+                      record.author,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         color: kPrimaryBrown.withOpacity(0.7),
                       ),
                     ),
@@ -222,14 +190,17 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text(
-                                      'Please borrow the book from the browse page'),
+                                      'Please borrow this book again from the Browse page.'),
                                 ),
                               );
-                            } else if (record.id.isNotEmpty) {
-                              await borrowHistoryRef.doc(record.id).update({
-                                'dueDate':
-                                    DateTime.now().add(const Duration(days: 14))
-                              });
+                            } else {
+                              final newDueDate =
+                                  DateTime.now().add(const Duration(days: 14));
+                              await _firestore
+                                  .collection('borrow_requests')
+                                  .doc(record.id)
+                                  .update({'dueDate': newDueDate});
+
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
@@ -243,10 +214,11 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
                             backgroundColor: kPrimaryBrown,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            minimumSize: const Size(0, 30),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 6),
+                            minimumSize: const Size(0, 32),
                           ),
                           child: Text(isReturned ? 'Borrow Again' : 'Renew',
                               style: const TextStyle(fontSize: 12)),
@@ -256,8 +228,7 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
                           onPressed: () {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Review feature coming soon!'),
-                              ),
+                                  content: Text('Review feature coming soon!')),
                             );
                           },
                           style: OutlinedButton.styleFrom(
@@ -266,9 +237,9 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
                                 color: kPrimaryBrown.withOpacity(0.5)),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8)),
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            minimumSize: const Size(0, 30),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 6),
+                            minimumSize: const Size(0, 32),
                           ),
                           child: const Text('Review',
                               style: TextStyle(fontSize: 12)),
@@ -278,9 +249,28 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
                   ],
                 ),
               ),
-            )
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildBookImage(String imageUrl) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: 80,
+        height: 110,
+        color: Colors.grey[300],
+        child: imageUrl.isNotEmpty
+            ? Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) =>
+                    const Icon(Icons.book, color: Colors.grey),
+              )
+            : const Icon(Icons.book, size: 40, color: Colors.grey),
       ),
     );
   }
@@ -290,27 +280,35 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-            color: const Color(0xFFD7CCC8),
-            borderRadius: BorderRadius.circular(8)),
-        child: const Text('Returned',
-            style: TextStyle(
-                fontSize: 11,
-                color: kPrimaryBrown,
-                fontWeight: FontWeight.bold)),
+          color: const Color(0xFFD7CCC8),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Text(
+          'Returned',
+          style: TextStyle(
+            fontSize: 11,
+            color: kPrimaryBrown,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       );
     } else {
-      final String formattedDate =
+      final formattedDate =
           dueDate != null ? DateFormat('dd MMM yyyy').format(dueDate) : 'N/A';
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-            color: Colors.green.shade100,
-            borderRadius: BorderRadius.circular(8)),
-        child: Text('Due Date: $formattedDate',
-            style: TextStyle(
-                fontSize: 11,
-                color: Colors.green.shade800,
-                fontWeight: FontWeight.bold)),
+          color: Colors.green.shade100,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          'Due Date: $formattedDate',
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.green.shade800,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       );
     }
   }

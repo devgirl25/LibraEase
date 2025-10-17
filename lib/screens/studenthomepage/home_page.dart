@@ -31,6 +31,7 @@ class _HomePageState extends State<HomePage>
   bool _isNavigating = false;
   final User? user = FirebaseAuth.instance.currentUser;
 
+  // Reduced image path for brevity, assuming it's correct
   final AssetImage backgroundImage =
       const AssetImage("assets/images/forgot_password/library.png");
 
@@ -53,7 +54,9 @@ class _HomePageState extends State<HomePage>
   }
 
   Future<void> _onItemTapped(int index) async {
-    if (_isNavigating) return;
+    if (_isNavigating || index == 0) {
+      return; // Ignore if already navigating or index is home
+    }
     _isNavigating = true;
 
     setState(() => _selectedIndex = index);
@@ -61,7 +64,7 @@ class _HomePageState extends State<HomePage>
     Widget? nextPage;
     switch (index) {
       case 1:
-        nextPage =  NotificationsPage();
+        nextPage = NotificationsPage();
         break;
       case 2:
         nextPage = const WishlistPage();
@@ -78,44 +81,61 @@ class _HomePageState extends State<HomePage>
       );
     }
 
+    // Reset selection to Home (index 0) after returning from another page
     if (mounted) setState(() => _selectedIndex = 0);
     _isNavigating = false;
   }
 
+  // --- CONSTANT COLORS (for context) ---
+// const Color kPrimaryBrown = Color.fromARGB(255, 87, 36, 14);
+// const Color kLightCream = Color.fromARGB(255, 245, 235, 220);
+
   Widget _buildHeader() {
     final email = user?.email ?? 'Guest User';
-    return Row(
-      children: [
-        Image.asset(
-          'assets/images/splash_screen/library_icon.png',
-          color: kLightCream,
-          width: 40,
-          height: 40,
-          errorBuilder: (_, __, ___) =>
-              const Icon(Icons.school, color: kLightCream, size: 40),
-        ),
-        const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'LibraEase',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: kLightCream,
+    return Container(
+      // 🎨 Apply kPrimaryBrown background and rounded corners
+      decoration: BoxDecoration(
+        color: kPrimaryBrown.withOpacity(0.95),
+        borderRadius: BorderRadius.circular(15),
+      ),
+      // Increased left padding to push content further right from the edge
+      padding: const EdgeInsets.only(left: 20, right: 16, top: 12, bottom: 12),
+      child: Row(
+        // The default mainAxisAlignment is MainAxisAlignment.start,
+        // which aligns content to the left.
+        // Removed mainAxisSize: MainAxisSize.min to allow it to stretch full width.
+        children: [
+          Image.asset(
+            'assets/images/splash_screen/library_icon.png',
+            color: kLightCream,
+            width: 40,
+            height: 40,
+            errorBuilder: (_, __, ___) =>
+                const Icon(Icons.school, color: kLightCream, size: 40),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'LibraEase',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: kLightCream,
+                ),
               ),
-            ),
-            Text(
-              'Welcome, ${email.split('@').first}',
-              style: const TextStyle(
-                fontSize: 14,
-                color: kLightCream,
+              Text(
+                'Welcome, ${email.split('@').first}',
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: kLightCream,
+                ),
               ),
-            ),
-          ],
-        ),
-      ],
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -128,20 +148,28 @@ class _HomePageState extends State<HomePage>
         );
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius:
+              BorderRadius.circular(15), // Slightly larger border radius
+          boxShadow: [
+            BoxShadow(
+              color: kPrimaryBrown.withOpacity(0.2),
+              blurRadius: 5,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Row(
           children: [
-            const Icon(Icons.search, color: kPrimaryBrown),
-            const SizedBox(width: 12),
+            const Icon(Icons.search, color: kPrimaryBrown, size: 24),
+            const SizedBox(width: 15),
             Text(
               'Search books or e-resources...',
               style: TextStyle(
                 color: Colors.grey[600],
-                fontSize: 16,
+                fontSize: 16.5,
               ),
             ),
           ],
@@ -157,59 +185,55 @@ class _HomePageState extends State<HomePage>
     required IconData backgroundIcon,
     required VoidCallback onTap,
   }) {
-    return AspectRatio(
-      aspectRatio: 1.0,
+    return Expanded(
       child: GestureDetector(
         onTap: onTap,
-        child: Stack(
-          alignment: Alignment.topCenter,
-          children: [
-            Positioned.fill(
-              top: 25,
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(16, 40, 16, 16),
+        child: Container(
+          height: MediaQuery.of(context).size.width /
+              2.5, // Fixed height based on screen width
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              Container(
+                height: 55,
+                width: 55,
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
+                  color: kPrimaryBrown,
+                  borderRadius: BorderRadius.circular(15),
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      title,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: kPrimaryBrown,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    Icon(
-                      backgroundIcon,
-                      size: 40,
-                      color: Colors.grey.withOpacity(0.2),
-                    ),
-                  ],
+                child: Icon(icon, color: Colors.white, size: 30),
+              ),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: kPrimaryBrown,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15.5,
+                  height: 1.2,
                 ),
               ),
-            ),
-            Container(
-              height: 50,
-              width: 50,
-              decoration: BoxDecoration(
-                color: kPrimaryBrown,
-                borderRadius: BorderRadius.circular(15),
+              // Moved the background icon out for a cleaner look or removed it,
+              // but I'll keep the small ghosted one inside for a subtle effect
+              Icon(
+                backgroundIcon,
+                size: 35,
+                color: kScaffoldBackground, // Use a less intrusive color
               ),
-              child: Icon(icon, color: Colors.white, size: 28),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -224,7 +248,7 @@ class _HomePageState extends State<HomePage>
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 70,
+        height: 80, // Increased height for better visibility
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
@@ -236,32 +260,30 @@ class _HomePageState extends State<HomePage>
             ),
           ],
         ),
-        child: Stack(
-          alignment: Alignment.centerLeft,
+        child: Row(
           children: [
-            Positioned(
-              left: 20,
-              child: Container(
-                height: 50,
-                width: 50,
-                decoration: BoxDecoration(
-                  color: kPrimaryBrown,
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: Icon(icon, color: Colors.white, size: 28),
+            const SizedBox(width: 20),
+            Container(
+              height: 50,
+              width: 50,
+              decoration: BoxDecoration(
+                color: kPrimaryBrown,
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Icon(icon, color: Colors.white, size: 28),
+            ),
+            const SizedBox(width: 20),
+            Text(
+              title,
+              style: const TextStyle(
+                color: kPrimaryBrown,
+                fontWeight: FontWeight.w800,
+                fontSize: 17, // Increased font size
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.only(left: 85.0),
-              child: Text(
-                title,
-                style: const TextStyle(
-                  color: kPrimaryBrown,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ),
+            const Spacer(),
+            Icon(Icons.arrow_forward_ios, color: Colors.grey.withOpacity(0.5)),
+            const SizedBox(width: 20),
           ],
         ),
       ),
@@ -269,10 +291,21 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _buildBottomNavBar() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10.0, left: 10, right: 10),
+    return Container(
+      // The padding is now on the outside of the `Container` for the box shadow
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: kPrimaryBrown.withOpacity(0.4),
+            blurRadius: 15,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(
+          16, 8, 16, 16), // Padding for the safe area bottom
       child: Container(
-        height: 65,
+        height: 60, // Slightly reduced height to look sleeker
         decoration: BoxDecoration(
           color: kPrimaryBrown,
           borderRadius: BorderRadius.circular(30),
@@ -295,9 +328,9 @@ class _HomePageState extends State<HomePage>
       icon: Icon(
         icon,
         color: _selectedIndex == index
-            ? Colors.white
+            ? kLightCream // White is a better highlight
             : kLightCream.withOpacity(0.6),
-        size: 28,
+        size: 30, // Slightly larger icon
       ),
       onPressed: () => _onItemTapped(index),
     );
@@ -309,154 +342,162 @@ class _HomePageState extends State<HomePage>
 
     return Scaffold(
       backgroundColor: kScaffoldBackground,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(40),
-              image: DecorationImage(
-                image: backgroundImage,
-                fit: BoxFit.cover,
-                colorFilter: ColorFilter.mode(
-                  kPrimaryBrown.withOpacity(0.8),
-                  BlendMode.darken,
-                ),
-              ),
+      body: Container(
+        // The main container now fills the entire screen
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: backgroundImage,
+            fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(
+              kPrimaryBrown.withOpacity(0.8),
+              BlendMode.darken,
             ),
-            child: Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    child: Padding(
-                      padding: const EdgeInsets.all(24.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildHeader(),
-                          const SizedBox(height: 24),
-                          _buildSearchBar(),
-                          const SizedBox(height: 32),
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(
+                      24, 24, 24, 0), // Generous padding
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeader(),
+                      const SizedBox(height: 30),
+                      _buildSearchBar(),
+                      const SizedBox(height: 30),
 
-                          // Row 1
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildMenuCard(
-                                  context: context,
-                                  icon: Icons.menu_book_outlined,
-                                  title: 'BROWSE\nE-BOOKS',
-                                  backgroundIcon: Icons.book_online_sharp,
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (_) => const EBooksPage()),
-                                    );
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: _buildMenuCard(
-                                  context: context,
-                                  icon: Icons.book_outlined,
-                                  title: 'BROWSE\nBOOKS',
-                                  backgroundIcon: Icons.auto_stories,
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (_) =>
-                                              const BrowseBooksPage()),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-
-                          // Row 2
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildMenuCard(
-                                  context: context,
-                                  icon: Icons.app_registration,
-                                  title: 'REGISTRATIONS',
-                                  backgroundIcon: Icons.edit_document,
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (_) =>
-                                              const RegistrationsPage()),
-                                    );
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: _buildMenuCard(
-                                  context: context,
-                                  icon: Icons.description_outlined,
-                                  title: 'PREVIOUS\nYEAR PAPERS',
-                                  backgroundIcon: Icons.find_in_page,
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (_) =>
-                                              const PreviousPapersPage()),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-
-                          // Wide Card
-                          _buildWideMenuCard(
+                      // Grid for main menu cards
+                      const Text(
+                        'Quick Access',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: kLightCream,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      GridView.count(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 16.0,
+                        mainAxisSpacing: 16.0,
+                        childAspectRatio: 1.0, // Ensures square cards for menu
+                        children: <Widget>[
+                          _buildMenuCard(
                             context: context,
-                            icon: Icons.history,
-                            title: 'BORROW HISTORY',
+                            icon: Icons.menu_book_outlined,
+                            title: 'E-BOOKS',
+                            backgroundIcon: Icons.book_online_sharp,
                             onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                    builder: (_) => const BorrowHistoryPage()),
+                                    builder: (_) => const EBooksPage()),
                               );
                             },
                           ),
-                          const SizedBox(height: 32),
-
-                          Center(
-                            child: ElevatedButton.icon(
-                              onPressed: () => _signOut(context),
-                              icon: const Icon(Icons.logout),
-                              label: const Text("Sign Out"),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: kLightCream.withOpacity(0.9),
-                                foregroundColor: kPrimaryBrown,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 30, vertical: 15),
-                              ),
-                            ),
+                          _buildMenuCard(
+                            context: context,
+                            icon: Icons.book_outlined,
+                            title: 'PHYSICAL BOOKS',
+                            backgroundIcon: Icons.auto_stories,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const BrowseBooksPage()),
+                              );
+                            },
+                          ),
+                          _buildMenuCard(
+                            context: context,
+                            icon: Icons.app_registration,
+                            title: 'REGISTRATIONS',
+                            backgroundIcon: Icons.edit_document,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const RegistrationsPage()),
+                              );
+                            },
+                          ),
+                          _buildMenuCard(
+                            context: context,
+                            icon: Icons.description_outlined,
+                            title: 'PREVIOUS PAPERS',
+                            backgroundIcon: Icons.find_in_page,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const PreviousPapersPage()),
+                              );
+                            },
                           ),
                         ],
                       ),
-                    ),
+                      const SizedBox(height: 30),
+
+                      const Text(
+                        'Your Activity',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: kLightCream,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Wide Card - Borrow History
+                      _buildWideMenuCard(
+                        context: context,
+                        icon: Icons.history,
+                        title: 'BORROW HISTORY',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const BorrowHistoryPage()),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 30),
+
+                      // Sign Out Button
+                      Center(
+                        child: ElevatedButton.icon(
+                          onPressed: () => _signOut(context),
+                          icon: const Icon(Icons.logout, size: 20),
+                          label: const Text("SIGN OUT",
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: kLightCream.withOpacity(0.9),
+                            foregroundColor: kPrimaryBrown,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 40, vertical: 15),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20), // Extra space above nav bar
+                    ],
                   ),
                 ),
-                _buildBottomNavBar(),
-              ],
-            ),
+              ),
+              // Bottom Navigation Bar is now outside the SingleChildScrollView
+              _buildBottomNavBar(),
+            ],
           ),
         ),
       ),

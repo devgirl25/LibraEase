@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
 import '../logins/constants.dart';
 
 class RegistrationsPage extends StatefulWidget {
@@ -12,6 +14,12 @@ class RegistrationsPage extends StatefulWidget {
 
 class _RegistrationsPageState extends State<RegistrationsPage> {
   final user = FirebaseAuth.instance.currentUser;
+
+  // Replace with your Google Form URL
+  final String bookBankFormUrl = 'https://forms.gle/YOUR_GOOGLE_FORM_LINK';
+
+  // Last date to register
+  final DateTime lastRegistrationDate = DateTime(2025, 10, 31);
 
   @override
   Widget build(BuildContext context) {
@@ -25,191 +33,238 @@ class _RegistrationsPageState extends State<RegistrationsPage> {
     return Scaffold(
       backgroundColor: kScaffoldBackground,
       appBar: _buildAppBar(context),
-      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: FirebaseFirestore.instance
-            .collection('registration_requests')
-            .where('userId', isEqualTo: user!.uid)
-            .orderBy('timestamp', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-
-          final docs = snapshot.data?.docs ?? [];
-
-          return SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildInfoCard(),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'My Registration Requests',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: kPrimaryBrown,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  if (docs.isEmpty)
-                    Center(
-                      child: Column(
-                        children: [
-                          const SizedBox(height: 40),
-                          Icon(Icons.assignment_outlined,
-                              size: 80, color: Colors.grey[400]),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'No registration requests yet',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: kPrimaryBrown,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  else
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: docs.length,
-                      itemBuilder: (context, index) {
-                        final data = docs[index].data();
-                        return _buildRegistrationCard(
-                          status: data['status'] ?? 'pending',
-                          timestamp: data['timestamp'] as Timestamp?,
-                          remarks: data['remarks'] ?? '',
-                        );
-                      },
-                    ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
-    return PreferredSize(
-      preferredSize: const Size.fromHeight(80.0),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: kPrimaryBrown,
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: ListTile(
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.pop(context),
-              ),
-              title: const Text(
-                'Registrations',
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildBookBankCard(),
+              const SizedBox(height: 24),
+              const Text(
+                'My Registration Requests',
                 style: TextStyle(
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  fontSize: 22,
-                  color: Colors.white,
+                  color: kPrimaryBrown,
                 ),
               ),
-            ),
+              const SizedBox(height: 16),
+              _buildRegistrationRequestsList(),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildInfoCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          )
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+  // --------------------- Book Bank Card ---------------------
+  Widget _buildBookBankCard() {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('registration_requests')
+          .where('userId', isEqualTo: user!.uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        bool hasPendingRequest = false;
+        if (snapshot.hasData) {
+          final docs = snapshot.data!.docs;
+          hasPendingRequest = docs.any((doc) {
+            final status = doc.data()['status'] ?? 'pending';
+            return status == 'pending' || status == 'approved';
+          });
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              )
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: kPrimaryBrown.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.info_outline,
-                  color: kPrimaryBrown,
-                  size: 28,
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: kPrimaryBrown.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.book,
+                      color: kPrimaryBrown,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  const Expanded(
+                    child: Text(
+                      'Book Bank Registration',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: kPrimaryBrown,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Submit your Book Bank request via the Google Form or register directly below. Make sure to fill in all required details.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: kPrimaryBrown.withOpacity(0.8),
+                  height: 1.5,
                 ),
               ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Text(
-                  'Library Registration',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: kPrimaryBrown,
-                  ),
+              const SizedBox(height: 16),
+              Text(
+                'Last date to register: ${_formatDate(lastRegistrationDate)}',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red[700],
                 ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: hasPendingRequest ||
+                              DateTime.now().isAfter(lastRegistrationDate)
+                          ? null
+                          : () async {
+                              await FirebaseFirestore.instance
+                                  .collection('registration_requests')
+                                  .add({
+                                'userId': user!.uid,
+                                'studentName': user!.displayName ?? 'Student',
+                                'status': 'pending',
+                                'submittedat': Timestamp.now(),
+                                'remarks': '',
+                              });
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content:
+                                      Text('Registration request submitted!'),
+                                ),
+                              );
+                            },
+                      icon: const Icon(Icons.how_to_reg),
+                      label: const Text('Register'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: kPrimaryBrown,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        if (await canLaunchUrl(Uri.parse(bookBankFormUrl))) {
+                          await launchUrl(Uri.parse(bookBankFormUrl),
+                              mode: LaunchMode.externalApplication);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Could not open the form.'),
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.open_in_new),
+                      label: const Text('Open Form'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Text(
-            'Your account is currently under review. Once approved by the admin, you will have full access to borrow books from the library.',
-            style: TextStyle(
-              fontSize: 14,
-              color: kPrimaryBrown.withOpacity(0.8),
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.blue[50],
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.blue[200]!),
-            ),
-            child: Row(
+        );
+      },
+    );
+  }
+
+  // --------------------- Registration Requests List ---------------------
+  Widget _buildRegistrationRequestsList() {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('registration_requests')
+          .where('userId', isEqualTo: user!.uid)
+          .orderBy('submittedat', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        final docs = snapshot.data?.docs ?? [];
+
+        if (docs.isEmpty) {
+          return Center(
+            child: Column(
               children: [
-                Icon(Icons.schedule, color: Colors.blue[700], size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Approval usually takes 1-2 business days',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.blue[700],
-                      fontWeight: FontWeight.w500,
-                    ),
+                const SizedBox(height: 40),
+                Icon(Icons.assignment_outlined,
+                    size: 80, color: Colors.grey[400]),
+                const SizedBox(height: 16),
+                const Text(
+                  'No registration requests yet',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: kPrimaryBrown,
                   ),
                 ),
               ],
             ),
-          ),
-        ],
-      ),
+          );
+        }
+
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final data = docs[index].data();
+            final status = data['status'] ?? 'pending';
+            final timestamp = data['submittedat'] as Timestamp?;
+            final remarks = data['remarks'] ?? '';
+            final studentName = data['studentName'] ?? 'You';
+
+            return _buildRegistrationCard(
+              status: status,
+              timestamp: timestamp,
+              remarks: remarks,
+              studentName: studentName,
+            );
+          },
+        );
+      },
     );
   }
 
@@ -217,6 +272,7 @@ class _RegistrationsPageState extends State<RegistrationsPage> {
     required String status,
     required Timestamp? timestamp,
     required String remarks,
+    required String studentName,
   }) {
     Color statusColor;
     IconData statusIcon;
@@ -228,7 +284,7 @@ class _RegistrationsPageState extends State<RegistrationsPage> {
         statusIcon = Icons.check_circle;
         statusText = 'Approved';
         break;
-      case 'rejected':
+      case 'denied':
         statusColor = Colors.red;
         statusIcon = Icons.cancel;
         statusText = 'Rejected';
@@ -256,6 +312,15 @@ class _RegistrationsPageState extends State<RegistrationsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            'Requested by: $studentName',
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: kPrimaryBrown,
+            ),
+          ),
+          const SizedBox(height: 8),
           Row(
             children: [
               Container(
@@ -294,32 +359,11 @@ class _RegistrationsPageState extends State<RegistrationsPage> {
           ),
           if (remarks.isNotEmpty) ...[
             const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: kScaffoldBackground.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Remarks:',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: kPrimaryBrown,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    remarks,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: kPrimaryBrown.withOpacity(0.8),
-                    ),
-                  ),
-                ],
+            Text(
+              'Remarks: $remarks',
+              style: TextStyle(
+                fontSize: 13,
+                color: kPrimaryBrown.withOpacity(0.8),
               ),
             ),
           ],
@@ -330,5 +374,35 @@ class _RegistrationsPageState extends State<RegistrationsPage> {
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(80.0),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: kPrimaryBrown,
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: ListTile(
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              ),
+              title: const Text(
+                'Registrations',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 22,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

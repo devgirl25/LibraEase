@@ -28,46 +28,60 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _fetchUserStats() async {
     final uid = user!.uid;
+    final firestore = FirebaseFirestore.instance;
 
     try {
-      // Fetch Wishlist count
-      final wishlistSnap = await FirebaseFirestore.instance
+      // Wishlist count
+      final wishlistSnap = await firestore
           .collection('users')
           .doc(uid)
           .collection('wishlist')
           .get();
 
-      // Fetch Reviews count (assuming a 'reviews' subcollection exists)
-      final reviewsSnap = await FirebaseFirestore.instance
+      // Reviews count
+      final reviewsSnap = await firestore
           .collection('users')
           .doc(uid)
           .collection('reviews')
           .get();
 
-      // Fetch Ebooks read count (assuming a 'borrow_history' with 'returned' status)
-      final borrowedSnap = await FirebaseFirestore.instance
+      // Borrow history
+      final borrowSnap = await firestore
           .collection('users')
           .doc(uid)
           .collection('borrow_history')
-          .where('status', isEqualTo: 'returned')
           .get();
 
-      // Fetch overdue books (borrowed but past due date)
-      final borrowedBooksSnap = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .collection('borrow_history')
-          .where('status', isEqualTo: 'borrowed')
-          .get();
-      int overdueCount = borrowedBooksSnap.docs.where((doc) {
-        final dueDate = (doc['dueDate'] as Timestamp).toDate();
-        return dueDate.isBefore(DateTime.now());
-      }).length;
+      int ebooksReadCount = 0;
+      int overdueCount = 0;
+      final now = DateTime.now();
+
+      for (var doc in borrowSnap.docs) {
+        final data = doc.data();
+        final status = data['status'] ?? '';
+        final dueDateRaw = data['dueDate'];
+
+        // Convert dueDate to DateTime safely
+        DateTime? dueDate;
+        if (dueDateRaw is Timestamp) {
+          dueDate = dueDateRaw.toDate();
+        } else if (dueDateRaw is String) {
+          dueDate = DateTime.tryParse(dueDateRaw);
+        }
+
+        if (status == 'returned') {
+          ebooksReadCount++;
+        } else if (status == 'borrowed' &&
+            dueDate != null &&
+            dueDate.isBefore(now)) {
+          overdueCount++;
+        }
+      }
 
       setState(() {
         stats['wishlist'] = wishlistSnap.docs.length;
         stats['reviews'] = reviewsSnap.docs.length;
-        stats['ebooksRead'] = borrowedSnap.docs.length;
+        stats['ebooksRead'] = ebooksReadCount;
         stats['overdue'] = overdueCount;
       });
     } catch (e) {
@@ -148,7 +162,6 @@ class _ProfilePageState extends State<ProfilePage> {
         final data = snapshot.data!.data()!;
         final name = data['name'] ?? 'Unknown';
         final email = data['email'] ?? user!.email ?? '';
-        final id = data['id'] ?? '';
 
         return Container(
           padding: const EdgeInsets.all(12),
@@ -196,13 +209,6 @@ class _ProfilePageState extends State<ProfilePage> {
                         color: kPrimaryBrown.withOpacity(0.7),
                       ),
                     ),
-                    Text(
-                      'ID: $id',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: kPrimaryBrown.withOpacity(0.7),
-                      ),
-                    ),
                   ],
                 ),
               ],
@@ -244,7 +250,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: _buildStatItem(
                   icon: Icons.menu_book,
                   value: stats['ebooksRead'].toString(),
-                  label: 'E-Books Read',
+                  label: 'Books Read',
                 ),
               ),
               const SizedBox(width: 16),
