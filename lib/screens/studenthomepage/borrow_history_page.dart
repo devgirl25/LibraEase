@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../logins/constants.dart';
+import '../../services/notificationservice.dart';
 
 // --- Enum for borrow status ---
 enum BorrowStatus { borrowed, returned }
@@ -57,6 +58,7 @@ class BorrowHistoryPage extends StatefulWidget {
 class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
   final _firestore = FirebaseFirestore.instance;
   final _auth = FirebaseAuth.instance;
+  final _notificationService = NotificationService();
   User? user;
 
   @override
@@ -199,7 +201,18 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
                               await _firestore
                                   .collection('borrow_requests')
                                   .doc(record.id)
-                                  .update({'dueDate': newDueDate});
+                                  .update({
+                                'dueDate': newDueDate,
+                                'reminderSent': false, // Reset reminder flag
+                              });
+
+                              // Send renewal notification
+                              await _notificationService
+                                  .sendBookRenewedNotification(
+                                userId: user!.uid,
+                                bookTitle: record.title,
+                                newDueDate: newDueDate,
+                              );
 
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(

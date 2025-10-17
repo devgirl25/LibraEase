@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'screens/logins/splash_screen.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // ✅ Firestore import
+import 'services/notification_scheduler.dart'; // ✅ Notification scheduler
 
 // ✅ Global Firestore instance
 late FirebaseFirestore db;
@@ -13,6 +14,9 @@ void main() async {
 
   // ✅ Initialize Firestore
   db = FirebaseFirestore.instance;
+
+  // ✅ Start notification scheduler for due date reminders
+  NotificationScheduler.instance.start();
 
   runApp(const MyApp());
 }

@@ -50,29 +50,65 @@ class NotificationsPage extends StatelessWidget {
                     style: TextStyle(color: kPrimaryBrown, fontSize: 16)));
           }
 
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: docs.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final data = docs[index];
-              final isUnread = !(data['read'] ?? false);
-
-              return GestureDetector(
-                onTap: () {
-                  if (isUnread) {
-                    _notificationService.markAsRead(userId, data.id);
-                  }
-                },
-                child: _buildNotificationCard(
-                  icon: Icons.notifications,
-                  title: data['title'] ?? '',
-                  subtitle: data['message'] ?? '',
-                  isUnread: isUnread,
-                  cardColor: isUnread ? const Color(0xFFE0DACE) : Colors.white,
+          return Column(
+            children: [
+              // Mark all as read button
+              if (docs.any((doc) => !(doc['read'] ?? false)))
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: () async {
+                        await _notificationService.markAllAsRead(userId);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content:
+                                  Text('All notifications marked as read'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.done_all, size: 20),
+                      label: const Text('Mark all as read'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: kPrimaryBrown,
+                      ),
+                    ),
+                  ),
                 ),
-              );
-            },
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: docs.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final data = docs[index];
+                    final isUnread = !(data['read'] ?? false);
+                    final type = data['type'] ?? 'general';
+
+                    return GestureDetector(
+                      onTap: () {
+                        if (isUnread) {
+                          _notificationService.markAsRead(userId, data.id);
+                        }
+                      },
+                      child: _buildNotificationCard(
+                        icon: _getIconForType(type),
+                        title: data['title'] ?? '',
+                        subtitle: data['message'] ?? '',
+                        isUnread: isUnread,
+                        cardColor:
+                            isUnread ? const Color(0xFFE0DACE) : Colors.white,
+                        iconColor: _getIconColorForType(type),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           );
         },
       ),
@@ -85,21 +121,24 @@ class NotificationsPage extends StatelessWidget {
     required String subtitle,
     required bool isUnread,
     required Color cardColor,
-    Color iconColor = Colors.white,
+    required Color iconColor,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(20),
+        border: isUnread
+            ? Border.all(color: kPrimaryBrown.withOpacity(0.3), width: 1.5)
+            : null,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
             radius: 22,
-            backgroundColor: kPrimaryBrown,
-            child: Icon(icon, color: iconColor, size: 24),
+            backgroundColor: iconColor,
+            child: Icon(icon, color: Colors.white, size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -107,8 +146,8 @@ class NotificationsPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold,
+                    style: TextStyle(
+                        fontWeight: isUnread ? FontWeight.bold : FontWeight.w600,
                         fontSize: 16,
                         color: kPrimaryBrown)),
                 const SizedBox(height: 4),
@@ -122,15 +161,53 @@ class NotificationsPage extends StatelessWidget {
           if (isUnread)
             Container(
               margin: const EdgeInsets.only(left: 8, top: 4),
-              width: 8,
-              height: 8,
+              width: 10,
+              height: 10,
               decoration: const BoxDecoration(
-                color: kPrimaryBrown,
+                color: Colors.red,
                 shape: BoxShape.circle,
               ),
             ),
         ],
       ),
     );
+  }
+
+  IconData _getIconForType(String type) {
+    switch (type) {
+      case 'borrow':
+        return Icons.book;
+      case 'return_reminder':
+        return Icons.access_time;
+      case 'overdue':
+        return Icons.warning;
+      case 'approved':
+        return Icons.check_circle;
+      case 'rejected':
+        return Icons.cancel;
+      case 'renewed':
+        return Icons.refresh;
+      default:
+        return Icons.notifications;
+    }
+  }
+
+  Color _getIconColorForType(String type) {
+    switch (type) {
+      case 'borrow':
+        return const Color(0xFF4CAF50); // Green
+      case 'return_reminder':
+        return const Color(0xFFFF9800); // Orange
+      case 'overdue':
+        return const Color(0xFFF44336); // Red
+      case 'approved':
+        return const Color(0xFF2196F3); // Blue
+      case 'rejected':
+        return const Color(0xFF9C27B0); // Purple
+      case 'renewed':
+        return const Color(0xFF00BCD4); // Cyan
+      default:
+        return kPrimaryBrown;
+    }
   }
 }

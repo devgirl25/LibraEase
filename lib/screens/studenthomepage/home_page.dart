@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'browse_books_page.dart';
 import 'ebooks_page.dart';
 import 'borrow_history_page.dart';
@@ -9,6 +10,7 @@ import 'Wishlist_page.dart';
 import 'notifications_page.dart';
 import 'Profile_page.dart';
 import '../logins/login_page_student.dart';
+import '../../services/notificationservice.dart';
 
 // --- CONSTANT COLORS ---
 const Color kPrimaryBrown = Color.fromARGB(255, 87, 36, 14);
@@ -30,6 +32,7 @@ class _HomePageState extends State<HomePage>
   int _selectedIndex = 0;
   bool _isNavigating = false;
   final User? user = FirebaseAuth.instance.currentUser;
+  final NotificationService _notificationService = NotificationService();
 
   // Reduced image path for brevity, assuming it's correct
   final AssetImage backgroundImage =
@@ -324,6 +327,63 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _buildNavItem(IconData icon, int index) {
+    // Show notification badge on notifications icon (index 1)
+    if (index == 1 && user != null) {
+      return StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .doc(user!.uid)
+            .collection('notifications')
+            .where('read', isEqualTo: false)
+            .snapshots(),
+        builder: (context, snapshot) {
+          final unreadCount =
+              snapshot.hasData ? snapshot.data!.docs.length : 0;
+
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                icon: Icon(
+                  icon,
+                  color: _selectedIndex == index
+                      ? kLightCream
+                      : kLightCream.withOpacity(0.6),
+                  size: 30,
+                ),
+                onPressed: () => _onItemTapped(index),
+              ),
+              if (unreadCount > 0)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      unreadCount > 9 ? '9+' : '$unreadCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
+      );
+    }
+
     return IconButton(
       icon: Icon(
         icon,
