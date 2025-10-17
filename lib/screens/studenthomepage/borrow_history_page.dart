@@ -199,7 +199,9 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
                               await _firestore
                                   .collection('borrow_requests')
                                   .doc(record.id)
-                                  .update({'dueDate': newDueDate});
+                                  .update({
+                                'dueDate': Timestamp.fromDate(newDueDate)
+                              });
 
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(

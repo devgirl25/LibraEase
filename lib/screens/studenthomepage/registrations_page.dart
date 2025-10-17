@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:intl/intl.dart';
+// removed unused import
 import '../logins/constants.dart';
 
 class RegistrationsPage extends StatefulWidget {
@@ -151,7 +151,7 @@ class _RegistrationsPageState extends State<RegistrationsPage> {
                                 'userId': user!.uid,
                                 'studentName': user!.displayName ?? 'Student',
                                 'status': 'pending',
-                                'submittedat': Timestamp.now(),
+                                'submittedAt': Timestamp.now(),
                                 'remarks': '',
                               });
 
@@ -212,7 +212,7 @@ class _RegistrationsPageState extends State<RegistrationsPage> {
       stream: FirebaseFirestore.instance
           .collection('registration_requests')
           .where('userId', isEqualTo: user!.uid)
-          .orderBy('submittedat', descending: true)
+          .orderBy('submittedAt', descending: true)
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -252,7 +252,7 @@ class _RegistrationsPageState extends State<RegistrationsPage> {
           itemBuilder: (context, index) {
             final data = docs[index].data();
             final status = data['status'] ?? 'pending';
-            final timestamp = data['submittedat'] as Timestamp?;
+            final timestamp = data['submittedAt'] as Timestamp?;
             final remarks = data['remarks'] ?? '';
             final studentName = data['studentName'] ?? 'You';
 

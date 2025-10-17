@@ -22,8 +22,9 @@ class BorrowService {
       'bookId': bookId,
       'bookTitle': bookTitle,
       'userId': userId,
-      'borrowDate': now,
-      'dueDate': dueDate,
+      // store timestamps as Firestore Timestamps
+      'borrowDate': Timestamp.fromDate(now),
+      'dueDate': Timestamp.fromDate(dueDate),
       'status': 'pending',
     });
 
@@ -36,8 +37,8 @@ class BorrowService {
     await borrowHistoryRef.set({
       'bookId': bookId,
       'bookTitle': bookTitle,
-      'borrowDate': now,
-      'dueDate': dueDate,
+      'borrowDate': Timestamp.fromDate(now),
+      'dueDate': Timestamp.fromDate(dueDate),
       'status': 'borrowed',
     });
 
@@ -70,7 +71,7 @@ class BorrowService {
       final oldDueDate = (doc['dueDate'] as Timestamp).toDate();
       final newDueDate = oldDueDate.add(Duration(days: extendDays));
 
-      await doc.reference.update({'dueDate': newDueDate});
+      await doc.reference.update({'dueDate': Timestamp.fromDate(newDueDate)});
 
       // 2. Send notification
       await _notificationManager.sendBookRenewedNotification(
@@ -114,7 +115,7 @@ class BorrowService {
       final doc = snapshot.docs.first;
       await doc.reference.update({
         'status': 'returned',
-        'returnDate': DateTime.now(),
+        'returnDate': Timestamp.fromDate(DateTime.now()),
       });
 
       // 2. Update book availability

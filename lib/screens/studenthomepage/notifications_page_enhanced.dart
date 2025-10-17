@@ -15,7 +15,7 @@ class NotificationsPageEnhanced extends StatelessWidget {
     return Scaffold(
       backgroundColor: kScaffoldBackground,
       appBar: _buildAppBar(context),
-      body: StreamBuilder<QuerySnapshot>(
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: _notificationManager.getNotificationsStream(userId),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
@@ -23,23 +23,26 @@ class NotificationsPageEnhanced extends StatelessWidget {
           }
 
           final docs = snapshot.data!.docs;
-          if (docs.isEmpty) {
-            return _buildEmptyState();
-          }
+
+          if (docs.isEmpty) return _buildEmptyState();
+
+          final hasUnread = docs.any((doc) => !(doc.data()['read'] ?? false));
 
           return Column(
             children: [
-              if (docs.any((doc) => !(doc['read'] ?? false)))
-                _buildMarkAllReadButton(context, docs),
+              if (hasUnread) _buildMarkAllReadButton(context, docs),
               Expanded(
                 child: ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemCount: docs.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
-                    final data = docs[index].data() as Map<String, dynamic>;
+                    final data = docs[index].data();
                     final isUnread = !(data['read'] ?? false);
                     final type = data['type'] ?? 'general';
+                    final timestamp = data['timestamp'] is Timestamp
+                        ? data['timestamp'] as Timestamp
+                        : null;
 
                     return _buildNotificationCard(
                       context: context,
@@ -47,7 +50,7 @@ class NotificationsPageEnhanced extends StatelessWidget {
                       type: type,
                       title: data['title'] ?? '',
                       subtitle: data['message'] ?? '',
-                      timestamp: data['timestamp'] as Timestamp?,
+                      timestamp: timestamp,
                       isUnread: isUnread,
                       data: data,
                     );
@@ -73,13 +76,11 @@ class NotificationsPageEnhanced extends StatelessWidget {
           backgroundColor: Colors.transparent,
           elevation: 0,
           title: const Text('Notifications',
-              style: TextStyle(
-                  fontWeight: FontWeight.bold, color: Colors.white)),
+              style:
+                  TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () {
-              Navigator.pop(context);
-            },
+            onPressed: () => Navigator.pop(context),
           ),
           actions: [
             PopupMenuButton<String>(
@@ -97,7 +98,7 @@ class NotificationsPageEnhanced extends StatelessWidget {
                   await _showDeleteAllDialog(context);
                 }
               },
-              itemBuilder: (context) => [
+              itemBuilder: (_) => [
                 const PopupMenuItem(
                   value: 'mark_all_read',
                   child: Row(
@@ -155,7 +156,8 @@ class NotificationsPageEnhanced extends StatelessWidget {
     );
   }
 
-  Widget _buildMarkAllReadButton(BuildContext context, List<QueryDocumentSnapshot> docs) {
+  Widget _buildMarkAllReadButton(BuildContext context,
+      List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: ElevatedButton.icon(
@@ -214,7 +216,7 @@ class NotificationsPageEnhanced extends StatelessWidget {
               action: SnackBarAction(
                 label: 'Undo',
                 onPressed: () {
-                  // In a real app, you'd want to restore the notification
+                  // Optional: restore notification
                 },
               ),
             ),
@@ -268,9 +270,8 @@ class NotificationsPageEnhanced extends StatelessWidget {
                           Text(
                             _formatTimestamp(timestamp),
                             style: TextStyle(
-                              fontSize: 11,
-                              color: kPrimaryBrown.withOpacity(0.5),
-                            ),
+                                fontSize: 11,
+                                color: kPrimaryBrown.withOpacity(0.5)),
                           ),
                       ],
                     ),
@@ -293,9 +294,7 @@ class NotificationsPageEnhanced extends StatelessWidget {
                   width: 10,
                   height: 10,
                   decoration: const BoxDecoration(
-                    color: kPrimaryBrown,
-                    shape: BoxShape.circle,
-                  ),
+                      color: kPrimaryBrown, shape: BoxShape.circle),
                 ),
             ],
           ),
@@ -308,61 +307,31 @@ class NotificationsPageEnhanced extends StatelessWidget {
     switch (type) {
       case 'due_date_reminder':
         return NotificationInfo(
-          icon: Icons.calendar_today,
-          color: Colors.orange,
-        );
+            icon: Icons.calendar_today, color: Colors.orange);
       case 'overdue':
-        return NotificationInfo(
-          icon: Icons.warning_rounded,
-          color: Colors.red,
-        );
+        return NotificationInfo(icon: Icons.warning_rounded, color: Colors.red);
       case 'borrow_success':
       case 'borrow_approved':
-        return NotificationInfo(
-          icon: Icons.check_circle,
-          color: Colors.green,
-        );
+        return NotificationInfo(icon: Icons.check_circle, color: Colors.green);
       case 'borrow_rejected':
-        return NotificationInfo(
-          icon: Icons.cancel,
-          color: Colors.red,
-        );
+        return NotificationInfo(icon: Icons.cancel, color: Colors.red);
       case 'book_renewed':
-        return NotificationInfo(
-          icon: Icons.refresh,
-          color: Colors.blue,
-        );
+        return NotificationInfo(icon: Icons.refresh, color: Colors.blue);
       case 'book_returned':
         return NotificationInfo(
-          icon: Icons.assignment_turned_in,
-          color: Colors.teal,
-        );
+            icon: Icons.assignment_turned_in, color: Colors.teal);
       case 'registration_approved':
-        return NotificationInfo(
-          icon: Icons.verified,
-          color: Colors.green,
-        );
+        return NotificationInfo(icon: Icons.verified, color: Colors.green);
       case 'registration_rejected':
-        return NotificationInfo(
-          icon: Icons.info,
-          color: Colors.orange,
-        );
+        return NotificationInfo(icon: Icons.info, color: Colors.orange);
       case 'new_book':
       case 'wishlist_available':
-        return NotificationInfo(
-          icon: Icons.book,
-          color: Colors.purple,
-        );
+        return NotificationInfo(icon: Icons.book, color: Colors.purple);
       case 'announcement':
-        return NotificationInfo(
-          icon: Icons.campaign,
-          color: Colors.indigo,
-        );
+        return NotificationInfo(icon: Icons.campaign, color: Colors.indigo);
       default:
         return NotificationInfo(
-          icon: Icons.notifications,
-          color: kPrimaryBrown,
-        );
+            icon: Icons.notifications, color: kPrimaryBrown);
     }
   }
 
@@ -382,19 +351,15 @@ class NotificationsPageEnhanced extends StatelessWidget {
       case 'overdue':
         buttonText = 'Renew Book';
         onPressed = () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('Navigate to book details to renew')),
-          );
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Navigate to book details to renew')));
         };
         break;
       case 'wishlist_available':
         buttonText = 'Borrow Now';
         onPressed = () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('Navigate to book details to borrow')),
-          );
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Navigate to book details to borrow')));
         };
         break;
       default:
@@ -407,9 +372,7 @@ class NotificationsPageEnhanced extends StatelessWidget {
       style: OutlinedButton.styleFrom(
         foregroundColor: kPrimaryBrown,
         side: BorderSide(color: kPrimaryBrown.withOpacity(0.5)),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       ),
       child: Text(buttonText, style: const TextStyle(fontSize: 12)),
@@ -421,49 +384,38 @@ class NotificationsPageEnhanced extends StatelessWidget {
     final date = timestamp.toDate();
     final difference = now.difference(date);
 
-    if (difference.inSeconds < 60) {
-      return 'Just now';
-    } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m ago';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays}d ago';
-    } else {
-      return '${date.day}/${date.month}/${date.year}';
-    }
+    if (difference.inSeconds < 60) return 'Just now';
+    if (difference.inMinutes < 60) return '${difference.inMinutes}m ago';
+    if (difference.inHours < 24) return '${difference.inHours}h ago';
+    if (difference.inDays < 7) return '${difference.inDays}d ago';
+    return '${date.day}/${date.month}/${date.year}';
   }
 
   Future<void> _showDeleteAllDialog(BuildContext context) async {
     return showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Delete All Notifications'),
-          content: const Text(
-              'Are you sure you want to delete all notifications? This action cannot be undone.'),
-          actions: [
-            TextButton(
+      builder: (_) => AlertDialog(
+        title: const Text('Delete All Notifications'),
+        content: const Text(
+            'Are you sure you want to delete all notifications? This action cannot be undone.'),
+        actions: [
+          TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                await _notificationManager.deleteAllNotifications(userId);
-                if (context.mounted) {
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('All notifications deleted')),
-                  );
-                }
-              },
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Delete All'),
-            ),
-          ],
-        );
-      },
+              child: const Text('Cancel')),
+          TextButton(
+            onPressed: () async {
+              await _notificationManager.deleteAllNotifications(userId);
+              if (context.mounted) {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('All notifications deleted')));
+              }
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete All'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -471,6 +423,5 @@ class NotificationsPageEnhanced extends StatelessWidget {
 class NotificationInfo {
   final IconData icon;
   final Color color;
-
   NotificationInfo({required this.icon, required this.color});
 }

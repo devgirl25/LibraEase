@@ -293,7 +293,8 @@ class _EBookListItemState extends State<EBookListItem> {
                             if (widget.pdfUrl.isNotEmpty) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                    content: Text('Opening ${widget.title}...')),
+                                    content:
+                                        Text('Opening ${widget.title}...')),
                               );
                             } else {
                               ScaffoldMessenger.of(context).showSnackBar(

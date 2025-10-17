@@ -6,19 +6,25 @@ class NotificationManager {
   Future<void> sendDueDateReminderNotification({
     required String userId,
     required String bookTitle,
-    required DateTime dueDate,
+    required dynamic dueDate,
   }) async {
-    final daysUntilDue = dueDate.difference(DateTime.now()).inDays;
+    final due = _toDateTime(dueDate);
+    if (due == null) return;
+
+    final daysUntilDue = due.difference(DateTime.now()).inDays;
 
     String message;
     if (daysUntilDue == 3) {
-      message = 'Reminder: "$bookTitle" is due in 3 days (${_formatDate(dueDate)}). Please return it on time.';
+      message =
+          'Reminder: "$bookTitle" is due in 3 days (${_formatDate(due)}). Please return it on time.';
     } else if (daysUntilDue == 1) {
-      message = 'Urgent: "$bookTitle" is due tomorrow (${_formatDate(dueDate)}). Please return it soon.';
+      message =
+          'Urgent: "$bookTitle" is due tomorrow (${_formatDate(due)}). Please return it soon.';
     } else if (daysUntilDue == 0) {
-      message = 'Today is the last day! "$bookTitle" is due today. Please return it before the library closes.';
+      message =
+          'Today is the last day! "$bookTitle" is due today. Please return it before the library closes.';
     } else {
-      message = 'Reminder: "$bookTitle" is due on ${_formatDate(dueDate)}.';
+      message = 'Reminder: "$bookTitle" is due on ${_formatDate(due)}.';
     }
 
     await _firestore
@@ -32,16 +38,20 @@ class NotificationManager {
       'read': false,
       'type': 'due_date_reminder',
       'bookTitle': bookTitle,
-      'dueDate': dueDate,
+      // store canonical Timestamp
+      'dueDate': Timestamp.fromDate(due),
     });
   }
 
   Future<void> sendOverdueNotification({
     required String userId,
     required String bookTitle,
-    required DateTime dueDate,
+    required dynamic dueDate,
   }) async {
-    final daysOverdue = DateTime.now().difference(dueDate).inDays;
+    final due = _toDateTime(dueDate);
+    if (due == null) return;
+
+    final daysOverdue = DateTime.now().difference(due).inDays;
 
     await _firestore
         .collection('users')
@@ -49,13 +59,14 @@ class NotificationManager {
         .collection('notifications')
         .add({
       'title': 'Overdue Book Alert',
-      'message': 'URGENT: "$bookTitle" is $daysOverdue ${daysOverdue == 1 ? 'day' : 'days'} overdue! '
-          'Please return it immediately to avoid penalties. Due date was ${_formatDate(dueDate)}.',
+      'message':
+          'URGENT: "$bookTitle" is $daysOverdue ${daysOverdue == 1 ? 'day' : 'days'} overdue! '
+              'Please return it immediately to avoid penalties. Due date was ${_formatDate(due)}.',
       'timestamp': FieldValue.serverTimestamp(),
       'read': false,
       'type': 'overdue',
       'bookTitle': bookTitle,
-      'dueDate': dueDate,
+      'dueDate': Timestamp.fromDate(due),
       'daysOverdue': daysOverdue,
     });
   }
@@ -63,9 +74,11 @@ class NotificationManager {
   Future<void> sendBorrowSuccessNotification({
     required String userId,
     required String bookTitle,
-    required DateTime borrowDate,
-    required DateTime dueDate,
+    required dynamic borrowDate,
+    required dynamic dueDate,
   }) async {
+    final bDate = _toDateTime(borrowDate);
+    final dDate = _toDateTime(dueDate);
     await _firestore
         .collection('users')
         .doc(userId)
@@ -73,21 +86,22 @@ class NotificationManager {
         .add({
       'title': 'Book Borrowed Successfully',
       'message': 'You have successfully borrowed "$bookTitle". '
-          'Please return it by ${_formatDate(dueDate)}. Happy reading!',
+          'Please return it by ${dDate != null ? _formatDate(dDate) : 'the due date'}. Happy reading!',
       'timestamp': FieldValue.serverTimestamp(),
       'read': false,
       'type': 'borrow_success',
       'bookTitle': bookTitle,
-      'borrowDate': borrowDate,
-      'dueDate': dueDate,
+      if (bDate != null) 'borrowDate': Timestamp.fromDate(bDate),
+      if (dDate != null) 'dueDate': Timestamp.fromDate(dDate),
     });
   }
 
   Future<void> sendBorrowApprovedNotification({
     required String userId,
     required String bookTitle,
-    required DateTime dueDate,
+    required dynamic dueDate,
   }) async {
+    final d = _toDateTime(dueDate);
     await _firestore
         .collection('users')
         .doc(userId)
@@ -95,12 +109,12 @@ class NotificationManager {
         .add({
       'title': 'Borrow Request Approved',
       'message': 'Your request to borrow "$bookTitle" has been approved! '
-          'Please collect the book from the library. Due date: ${_formatDate(dueDate)}.',
+          'Please collect the book from the library. Due date: ${d != null ? _formatDate(d) : 'N/A'}.',
       'timestamp': FieldValue.serverTimestamp(),
       'read': false,
       'type': 'borrow_approved',
       'bookTitle': bookTitle,
-      'dueDate': dueDate,
+      if (d != null) 'dueDate': Timestamp.fromDate(d),
     });
   }
 
@@ -128,9 +142,11 @@ class NotificationManager {
   Future<void> sendBookRenewedNotification({
     required String userId,
     required String bookTitle,
-    required DateTime oldDueDate,
-    required DateTime newDueDate,
+    required dynamic oldDueDate,
+    required dynamic newDueDate,
   }) async {
+    final oDate = _toDateTime(oldDueDate);
+    final nDate = _toDateTime(newDueDate);
     await _firestore
         .collection('users')
         .doc(userId)
@@ -138,34 +154,36 @@ class NotificationManager {
         .add({
       'title': 'Book Renewed Successfully',
       'message': '"$bookTitle" has been renewed successfully! '
-          'New due date: ${_formatDate(newDueDate)}. Previous due date was ${_formatDate(oldDueDate)}.',
+          'New due date: ${nDate != null ? _formatDate(nDate) : 'N/A'}. Previous due date was ${oDate != null ? _formatDate(oDate) : 'N/A'}.',
       'timestamp': FieldValue.serverTimestamp(),
       'read': false,
       'type': 'book_renewed',
       'bookTitle': bookTitle,
-      'oldDueDate': oldDueDate,
-      'newDueDate': newDueDate,
+      if (oDate != null) 'oldDueDate': Timestamp.fromDate(oDate),
+      if (nDate != null) 'newDueDate': Timestamp.fromDate(nDate),
     });
   }
 
   Future<void> sendBookReturnedNotification({
     required String userId,
     required String bookTitle,
-    required DateTime returnDate,
+    required dynamic returnDate,
   }) async {
+    final r = _toDateTime(returnDate);
     await _firestore
         .collection('users')
         .doc(userId)
         .collection('notifications')
         .add({
       'title': 'Book Returned',
-      'message': 'Thank you for returning "$bookTitle" on ${_formatDate(returnDate)}. '
-          'We hope you enjoyed reading it!',
+      'message':
+          'Thank you for returning "$bookTitle" on ${r != null ? _formatDate(r) : 'N/A'}. '
+              'We hope you enjoyed reading it!',
       'timestamp': FieldValue.serverTimestamp(),
       'read': false,
       'type': 'book_returned',
       'bookTitle': bookTitle,
-      'returnDate': returnDate,
+      if (r != null) 'returnDate': Timestamp.fromDate(r),
     });
   }
 
@@ -179,8 +197,9 @@ class NotificationManager {
         .collection('notifications')
         .add({
       'title': 'Registration Approved',
-      'message': 'Congratulations $studentName! Your library registration has been approved. '
-          'You can now borrow books from the library. Visit the library to collect your library card.',
+      'message':
+          'Congratulations $studentName! Your library registration has been approved. '
+              'You can now borrow books from the library. Visit the library to collect your library card.',
       'timestamp': FieldValue.serverTimestamp(),
       'read': false,
       'type': 'registration_approved',
@@ -218,8 +237,9 @@ class NotificationManager {
         .collection('notifications')
         .add({
       'title': 'New Book Available',
-      'message': 'A new book "$bookTitle" by $author has been added to the library. '
-          'Category: $category. Check it out now!',
+      'message':
+          'A new book "$bookTitle" by $author has been added to the library. '
+              'Category: $category. Check it out now!',
       'timestamp': FieldValue.serverTimestamp(),
       'read': false,
       'type': 'new_book',
@@ -239,8 +259,9 @@ class NotificationManager {
         .collection('notifications')
         .add({
       'title': 'Wishlist Book Available',
-      'message': 'Great news! "$bookTitle" from your wishlist is now available for borrowing. '
-          'Hurry up and borrow it before someone else does!',
+      'message':
+          'Great news! "$bookTitle" from your wishlist is now available for borrowing. '
+              'Hurry up and borrow it before someone else does!',
       'timestamp': FieldValue.serverTimestamp(),
       'read': false,
       'type': 'wishlist_available',
@@ -268,8 +289,6 @@ class NotificationManager {
 
   Future<void> checkAndSendDueDateReminders() async {
     final now = DateTime.now();
-    final threeDaysLater = now.add(const Duration(days: 3));
-    final oneDayLater = now.add(const Duration(days: 1));
 
     final usersSnapshot = await _firestore.collection('users').get();
 
@@ -292,10 +311,12 @@ class NotificationManager {
 
         final lastNotificationField = 'lastReminderSent_${borrowDoc.id}';
         final userDocData = userDoc.data() as Map<String, dynamic>?;
-        final lastNotificationDate = userDocData?[lastNotificationField] as Timestamp?;
+        final lastNotificationDate =
+            userDocData?[lastNotificationField] as Timestamp?;
 
         final shouldSendNotification = lastNotificationDate == null ||
-            DateTime.now().difference(lastNotificationDate.toDate()).inDays >= 1;
+            DateTime.now().difference(lastNotificationDate.toDate()).inDays >=
+                1;
 
         if (shouldSendNotification) {
           if (daysUntilDue == 3 || daysUntilDue == 1 || daysUntilDue == 0) {
@@ -407,5 +428,35 @@ class NotificationManager {
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  // Helper: convert various representations (Timestamp, String, DateTime) to DateTime
+  DateTime? _toDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    try {
+      if (value is Timestamp) return value.toDate();
+      if (value is String) return DateTime.tryParse(value);
+    } catch (_) {}
+    return null;
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> getNotificationsStream(
+      String userId) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('notifications')
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+
+  Future<void> markAsRead(String userId, String notificationId) async {
+    await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('notifications')
+        .doc(notificationId)
+        .update({'read': true});
   }
 }

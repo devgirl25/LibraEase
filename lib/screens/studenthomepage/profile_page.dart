@@ -270,7 +270,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: _buildStatItem(
                   icon: Icons.edit,
                   value: stats['reviews'].toString(),
-                  label: 'Reviews written',
+                  label: 'Book Fines',
                 ),
               ),
               const SizedBox(width: 16),

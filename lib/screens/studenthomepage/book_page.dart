@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'wishlist_page.dart'; // Make sure the path is correct
 
 const Color kPrimaryBrown = Color.fromARGB(255, 87, 36, 14);
 const Color kLightCream = Color.fromARGB(255, 245, 235, 220);
@@ -121,7 +120,8 @@ class _BookDetailPageState extends State<BookDetailPage> {
         'userId': user.uid,
         'status': 'pending',
         'requestedAt': FieldValue.serverTimestamp(),
-        'dueDate': dueDate.toIso8601String(),
+        // Store dueDate as a Firestore Timestamp for consistency
+        'dueDate': Timestamp.fromDate(dueDate),
       });
 
       ScaffoldMessenger.of(context).showSnackBar(

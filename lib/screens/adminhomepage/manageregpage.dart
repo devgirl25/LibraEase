@@ -18,7 +18,7 @@ class ManageRegRequestsPage extends StatelessWidget {
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('registration_requests')
-            .orderBy('submittedat', descending: true)
+            .orderBy('submittedAt', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -42,7 +42,7 @@ class ManageRegRequestsPage extends StatelessWidget {
               final doc = docs[index];
               final data = doc.data() as Map<String, dynamic>;
               final status = data['status'] ?? 'pending';
-              final submittedAt = (data['submittedat'] as Timestamp?)?.toDate();
+              final submittedAt = (data['submittedAt'] as Timestamp?)?.toDate();
               final studentName = data['studentName'] ?? 'Unknown Student';
 
               Color statusColor = status == 'approved'

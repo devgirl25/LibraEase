@@ -4,10 +4,12 @@ import 'package:libra/screens/adminhomepage/manageregpage.dart';
 import '../../widgets/dashboardcard.dart';
 import 'add_book_page.dart';
 import 'borrow_request_page.dart'; // import the borrow requests page
-//import 'registration_requests_page.dart';
+import 'overdue_books.dart';
 
 class DashboardGrid extends StatelessWidget {
   const DashboardGrid({super.key});
+
+  DateTime get today => DateTime.now();
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +61,7 @@ class DashboardGrid extends StatelessWidget {
 
               return DashboardCard(
                 value: countText,
-                title: "BOOKS",
+                title: "ADD BOOKS",
                 icon: Icons.library_books,
                 onTap: () {
                   Navigator.push(
@@ -105,12 +107,34 @@ class DashboardGrid extends StatelessWidget {
           ),
 
           // ✅ Overdue Books card
-          DashboardCard(
-            value: "09", // You can later replace with dynamic count
-            title: "OVERDUE BOOKS",
-            icon: Icons.upload,
-            onTap: () {
-              // Navigate to Overdue Books Page
+          // ✅ Overdue Books card
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('borrow_requests')
+                .where('status', isEqualTo: 'accepted')
+                .snapshots(),
+            builder: (context, snapshot) {
+              int overdueCount = 0;
+
+              if (snapshot.hasData) {
+                final docs = snapshot.data!.docs;
+                overdueCount = docs.where((doc) {
+                  final dueDate = (doc['dueDate'] as Timestamp).toDate();
+                  return dueDate.isBefore(today);
+                }).length;
+              }
+
+              return DashboardCard(
+                value: overdueCount.toString(),
+                title: "OVERDUE BOOKS",
+                icon: Icons.upload,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const OverdueBooksPage()),
+                  );
+                },
+              );
             },
           ),
 
