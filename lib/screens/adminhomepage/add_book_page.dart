@@ -1,5 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../services/cloudinary_services.dart';
 import 'Scan_book_page.dart';
 
 class AddBookPage extends StatefulWidget {
@@ -16,31 +19,56 @@ class _AddBookPageState extends State<AddBookPage> {
   final TextEditingController isbnController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
 
-  bool _isLoading = false;
-
+  File? _selectedImage;
+  bool _isUploading = false;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // ✅ Add book to Firestore
-  Future<void> addBook() async {
-    if (!_formKey.currentState!.validate()) return;
+  /// 📷 Pick image from camera or gallery
+  Future<void> _pickImage(ImageSource source) async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: source, imageQuality: 85);
+    if (picked != null) {
+      setState(() => _selectedImage = File(picked.path));
+    }
+  }
 
-    setState(() => _isLoading = true);
+  /// ☁️ Upload image to Cloudinary and save book in Firestore
+  Future<void> _uploadBookWithImage() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_selectedImage == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please add a book image first.")),
+      );
+      return;
+    }
+
+    setState(() => _isUploading = true);
 
     try {
-      // Add book without image
+      final imageUrl =
+          await CloudinaryService().uploadImageToCloudinary(_selectedImage!);
+
+      if (imageUrl == null) {
+        throw Exception("Image upload failed");
+      }
+
       await _firestore.collection('books').add({
         'title': titleController.text.trim(),
         'author': authorController.text.trim(),
         'isbn': isbnController.text.trim(),
         'description': descriptionController.text.trim(),
+        'imageUrl': imageUrl,
         'addedAt': FieldValue.serverTimestamp(),
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Book added successfully!')),
+        const SnackBar(content: Text('✅ Book added successfully!')),
       );
 
-      // Clear form
+      setState(() {
+        _selectedImage = null;
+      });
+
       titleController.clear();
       authorController.clear();
       isbnController.clear();
@@ -49,17 +77,8 @@ class _AddBookPageState extends State<AddBookPage> {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      setState(() => _isUploading = false);
     }
-  }
-
-  @override
-  void dispose() {
-    titleController.dispose();
-    authorController.dispose();
-    isbnController.dispose();
-    descriptionController.dispose();
-    super.dispose();
   }
 
   @override
@@ -73,89 +92,121 @@ class _AddBookPageState extends State<AddBookPage> {
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
-          child: Column(
-            children: [
-              // Title
-              TextFormField(
-                controller: titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Book Title',
-                  border: OutlineInputBorder(),
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                // Title
+                TextFormField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Book Title',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) =>
+                      value == null || value.isEmpty ? 'Enter title' : null,
                 ),
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Enter title' : null,
-              ),
-              const SizedBox(height: 12),
+                const SizedBox(height: 12),
 
-              // Author
-              TextFormField(
-                controller: authorController,
-                decoration: const InputDecoration(
-                  labelText: 'Author',
-                  border: OutlineInputBorder(),
+                // Author
+                TextFormField(
+                  controller: authorController,
+                  decoration: const InputDecoration(
+                    labelText: 'Author',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) =>
+                      value == null || value.isEmpty ? 'Enter author' : null,
                 ),
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Enter author' : null,
-              ),
-              const SizedBox(height: 12),
+                const SizedBox(height: 12),
 
-              // ISBN
-              TextFormField(
-                controller: isbnController,
-                decoration: const InputDecoration(
-                  labelText: 'ISBN',
-                  border: OutlineInputBorder(),
+                // ISBN
+                TextFormField(
+                  controller: isbnController,
+                  decoration: const InputDecoration(
+                    labelText: 'ISBN',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) =>
+                      value == null || value.isEmpty ? 'Enter ISBN' : null,
                 ),
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Enter ISBN' : null,
-              ),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.qr_code_scanner),
-                  label: const Text('Scan Barcode'),
-                  onPressed: () async {
-                    final scanned = await Navigator.of(context).push<String>(
-                      MaterialPageRoute(
-                        builder: (_) => const ScanBookPage(),
-                      ),
-                    );
-                    if (scanned != null && scanned.isNotEmpty) {
-                      isbnController.text = scanned;
-                    }
-                  },
+                const SizedBox(height: 8),
+
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.qr_code_scanner),
+                    label: const Text('Scan Barcode'),
+                    onPressed: () async {
+                      final scanned = await Navigator.of(context).push<String>(
+                        MaterialPageRoute(
+                          builder: (_) => const ScanBookPage(),
+                        ),
+                      );
+                      if (scanned != null && scanned.isNotEmpty) {
+                        isbnController.text = scanned;
+                      }
+                    },
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
 
-              // Description
-              TextFormField(
-                controller: descriptionController,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Description',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Enter description' : null,
-              ),
-              const SizedBox(height: 12),
+                const SizedBox(height: 20),
 
-              // No image stored for books
-              const SizedBox(height: 20),
-
-              _isLoading
-                  ? const CircularProgressIndicator(color: Color(0xFF255A5A))
-                  : ElevatedButton(
-                      onPressed: addBook,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF255A5A),
-                        minimumSize: const Size.fromHeight(50),
-                      ),
-                      child: const Text('Add Book'),
+                /// 📷 Image Section
+                if (_selectedImage != null) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.file(
+                      _selectedImage!,
+                      width: 150,
+                      height: 200,
+                      fit: BoxFit.cover,
                     ),
-            ],
+                  ),
+                  const SizedBox(height: 10),
+                  TextButton.icon(
+                    onPressed: () => _pickImage(ImageSource.camera),
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text("Retake Image"),
+                  ),
+                ] else ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.camera_alt),
+                        label: const Text("Camera"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF255A5A),
+                        ),
+                        onPressed: () => _pickImage(ImageSource.camera),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.photo_library),
+                        label: const Text("Gallery"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF255A5A),
+                        ),
+                        onPressed: () => _pickImage(ImageSource.gallery),
+                      ),
+                    ],
+                  ),
+                ],
+
+                const SizedBox(height: 20),
+
+                _isUploading
+                    ? const CircularProgressIndicator(color: Color(0xFF255A5A))
+                    : ElevatedButton(
+                        onPressed: _uploadBookWithImage,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF255A5A),
+                          minimumSize: const Size.fromHeight(50),
+                        ),
+                        child: const Text('Add Book with Image'),
+                      ),
+              ],
+            ),
           ),
         ),
       ),
