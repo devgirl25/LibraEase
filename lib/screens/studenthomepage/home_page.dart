@@ -7,7 +7,7 @@ import 'registrations_page.dart';
 import 'Wishlist_page.dart';
 import 'Profile_page.dart';
 import '../logins/login_page_student.dart';
-// notifications removed from HomePage per request
+import 'notifications_page.dart';
 
 // --- CONSTANT COLORS ---
 const Color kPrimaryBrown = Color.fromARGB(255, 87, 36, 14);
@@ -67,9 +67,12 @@ class _HomePageState extends State<HomePage>
     Widget? nextPage;
     switch (index) {
       case 1:
-        nextPage = const WishlistPage();
+        nextPage = const NotificationsPage();
         break;
       case 2:
+        nextPage = const WishlistPage();
+        break;
+      case 3:
         nextPage = const ProfilePage();
         break;
     }

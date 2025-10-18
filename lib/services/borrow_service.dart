@@ -1,10 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/firestore_helpers.dart';
-import 'notification_manager.dart';
 
 class BorrowService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final NotificationManager _notificationManager = NotificationManager();
 
   /// Borrow a book
   Future<void> borrowBook({
@@ -43,13 +41,7 @@ class BorrowService {
       'status': 'borrowed',
     });
 
-    // 3. Send notification
-    await _notificationManager.sendBorrowSuccessNotification(
-      userId: userId,
-      bookTitle: bookTitle,
-      borrowDate: now,
-      dueDate: dueDate,
-    );
+    // 3. Notification removed — clients can poll borrow_requests / history
   }
 
   /// Renew a book
@@ -75,27 +67,8 @@ class BorrowService {
 
       await doc.reference.update({'dueDate': Timestamp.fromDate(newDueDate)});
 
-      // 2. Send notification
-      await _notificationManager.sendBookRenewedNotification(
-        userId: userId,
-        bookTitle: bookTitle,
-        oldDueDate: oldDueDate,
-        newDueDate: newDueDate,
-      );
+      // 2. Notification removed
     }
-  }
-
-  /// Overdue notification (to be called by a scheduled job or Cloud Function)
-  Future<void> sendOverdueNotification({
-    required String userId,
-    required String bookTitle,
-    required DateTime dueDate,
-  }) async {
-    await _notificationManager.sendOverdueNotification(
-      userId: userId,
-      bookTitle: bookTitle,
-      dueDate: dueDate,
-    );
   }
 
   /// Return a book
@@ -125,12 +98,7 @@ class BorrowService {
         'available': true,
       });
 
-      // 3. Send notification
-      await _notificationManager.sendBookReturnedNotification(
-        userId: userId,
-        bookTitle: bookTitle,
-        returnDate: DateTime.now(),
-      );
+      // 3. Notification removed
     }
   }
 }

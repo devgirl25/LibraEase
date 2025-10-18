@@ -1,0 +1,14 @@
+{
+  "name": "libra-importer",
+  "version": "1.0.0",
+  "description": "Local importer to fetch Google Books and write to Firestore (for local use)",
+  "main": "index.js",
+  "scripts": {
+    "import": "node index.js",
+    "import:scheduled": "node check_and_run.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^11.0.0",
+    "node-fetch": "^2.6.7"
+  }
+}

@@ -13,4 +13,6 @@ const Color kScaffoldBackground = Color(0xFFD7CCC8);
 // For local testing with the Firebase Functions emulator run locally, use the emulator URL below.
 // If you're running the Android AVD, replace 127.0.0.1 with 10.0.2.2 (AVD host loopback).
 // Example emulator URL: http://127.0.0.1:5001/<PROJECT_ID>/us-central1/importEbookHttp
-
+// Optional: Google Books API key. If you have one, set it here. Leave empty to use
+// unauthenticated requests (rate-limited).
+const String kGoogleBooksApiKey = '';

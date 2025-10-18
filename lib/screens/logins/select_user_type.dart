@@ -17,11 +17,11 @@ class SelectUserTypeScreen extends StatelessWidget {
               children: [
                 const SizedBox(height: 80),
                 Transform.translate(
-                  offset: const Offset(-80, -100),
+                  offset: const Offset(-67,-100),
                   child: const Text(
                     'Select User Type',
                     style: TextStyle(
-                      fontSize: 28,
+                      fontSize: 26,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
@@ -145,4 +145,4 @@ class SelectUserTypeScreen extends StatelessWidget {
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
   }
-} 
+}

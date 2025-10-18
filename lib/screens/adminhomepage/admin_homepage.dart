@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../utils/firestore_helpers.dart';
 import 'package:libra/screens/adminhomepage/manageregpage.dart';
+import 'add_ebooks_page.dart';
 // import 'package:libra/screens/adminhomepage/add_ebooks_page.dart' hide Padding;
 import '../../widgets/dashboardcard.dart';
 import 'add_book_page.dart';
@@ -181,10 +182,10 @@ class DashboardGrid extends StatelessWidget {
             title: "ADD E-BOOKS",
             icon: Icons.cloud_download,
             onTap: () {
-              // Navigator.push(
-              //   // context,
-              //   // MaterialPageRoute(builder: (_) => const AddEBooksPage()),
-              // );
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AddEBooksPage()),
+              );
             },
           ),
         ],
