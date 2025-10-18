@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/firestore_helpers.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
@@ -32,7 +33,8 @@ class OverdueBooksPage extends StatelessWidget {
 
           // Filter overdue books
           final overdueDocs = snapshot.data!.docs.where((doc) {
-            final dueDate = (doc['dueDate'] as Timestamp).toDate();
+            final dueDate = toDateTime(doc['dueDate']);
+            if (dueDate == null) return false;
             return dueDate.isBefore(DateTime.now());
           }).toList();
 
@@ -46,8 +48,12 @@ class OverdueBooksPage extends StatelessWidget {
             itemBuilder: (context, index) {
               final doc = overdueDocs[index];
               final data = doc.data() as Map<String, dynamic>;
-              final dueDate = (data['dueDate'] as Timestamp).toDate();
-              final borrowDate = (data['borrowDate'] as Timestamp).toDate();
+              final dueDate = toDateTime(data['dueDate']);
+              final borrowDate = toDateTime(data['borrowDate']);
+              if (dueDate == null || borrowDate == null) {
+                // missing dates - skip rendering this entry
+                return const SizedBox.shrink();
+              }
               final studentName = data['studentName'] ?? 'Unknown';
               final bookTitle = data['bookTitle'] ?? 'Unknown';
 
@@ -84,8 +90,7 @@ class OverdueBooksPage extends StatelessWidget {
                               // TODO: Send reminder notification to student
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                    content:
-                                        Text('Reminder sent to student')),
+                                    content: Text('Reminder sent to student')),
                               );
                             },
                             icon: const Icon(Icons.notifications),

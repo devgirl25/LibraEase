@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../utils/firestore_helpers.dart';
 import 'notification_manager.dart';
 
 class BorrowService {
@@ -68,8 +69,9 @@ class BorrowService {
     final snapshot = await historyRef.get();
     if (snapshot.docs.isNotEmpty) {
       final doc = snapshot.docs.first;
-      final oldDueDate = (doc['dueDate'] as Timestamp).toDate();
-      final newDueDate = oldDueDate.add(Duration(days: extendDays));
+      final oldDueDate = toDateTime(doc['dueDate']);
+      final newDueDate =
+          (oldDueDate ?? DateTime.now()).add(Duration(days: extendDays));
 
       await doc.reference.update({'dueDate': Timestamp.fromDate(newDueDate)});
 

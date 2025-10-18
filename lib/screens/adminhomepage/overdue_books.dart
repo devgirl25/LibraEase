@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/firestore_helpers.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class OverdueBooksPage extends StatelessWidget {
@@ -28,11 +29,12 @@ class OverdueBooksPage extends StatelessWidget {
 
           final docs = snapshot.data!.docs;
 
-          // Filter overdue books
+          // Filter overdue books and remove entries without a valid due date
           final overdueBooks = docs.where((doc) {
-            final dueDate = (doc['dueDate'] as Timestamp).toDate();
-            final dueDateOnly =
-                DateTime(dueDate.year, dueDate.month, dueDate.day);
+            final raw = (doc.data() as Map<String, dynamic>)['dueDate'];
+            final due = toDateTime(raw);
+            if (due == null) return false;
+            final dueDateOnly = DateTime(due.year, due.month, due.day);
             final todayDate = DateTime(today.year, today.month, today.day);
             return dueDateOnly.isBefore(todayDate);
           }).toList();
@@ -45,7 +47,7 @@ class OverdueBooksPage extends StatelessWidget {
             itemCount: overdueBooks.length,
             itemBuilder: (context, index) {
               final data = overdueBooks[index].data() as Map<String, dynamic>;
-              final dueDate = (data['dueDate'] as Timestamp).toDate();
+              final dueDate = toDateTime(data['dueDate'])!;
 
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/firestore_helpers.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:libra/screens/adminhomepage/manageregpage.dart';
 import '../widgets/dashboardcard.dart';
@@ -53,7 +54,8 @@ class DashboardGrid extends StatelessWidget {
         .where('status', isEqualTo: 'borrowed')
         .get();
     final overdueCount = borrowedSnap.docs.where((doc) {
-      final dueDate = (doc['dueDate'] as Timestamp).toDate();
+      final dueDate = toDateTime(doc['dueDate']);
+      if (dueDate == null) return false;
       return dueDate.isBefore(DateTime.now());
     }).length;
     counts['overdueBooks'] = overdueCount;
@@ -108,60 +110,64 @@ class DashboardGrid extends StatelessWidget {
                   );
                 },
               ),
-             
-             // Borrow Requests card
-StreamBuilder<QuerySnapshot>(
-  stream: FirebaseFirestore.instance
-      .collection('borrow_requests')
-      .where('status', isEqualTo: 'pending')
-      .snapshots(),
-  builder: (context, snapshot) {
-    final count = snapshot.hasData ? snapshot.data!.docs.length : 0;
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const BorrowRequestsPage()),
-        );
-      },
-      child: DashboardCard(
-        value: count.toString(),
-        title: "BORROW REQUESTS",
-        icon: Icons.download_for_offline,
-      ),
-    );
-  },
-),
+
+              // Borrow Requests card
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('borrow_requests')
+                    .where('status', isEqualTo: 'pending')
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  final count =
+                      snapshot.hasData ? snapshot.data!.docs.length : 0;
+                  return InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const BorrowRequestsPage()),
+                      );
+                    },
+                    child: DashboardCard(
+                      value: count.toString(),
+                      title: "BORROW REQUESTS",
+                      icon: Icons.download_for_offline,
+                    ),
+                  );
+                },
+              ),
 
 // Overdue Books card
-StreamBuilder<QuerySnapshot>(
-  stream: FirebaseFirestore.instance
-      .collection('borrow_requests')
-      .where('status', isEqualTo: 'borrowed')
-      .snapshots(),
-  builder: (context, snapshot) {
-    int overdueCount = 0;
-    if (snapshot.hasData) {
-      overdueCount = snapshot.data!.docs.where((doc) {
-        final dueDate = (doc['dueDate'] as Timestamp).toDate();
-        return dueDate.isBefore(DateTime.now());
-      }).length;
-    }
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const OverdueBooksPage()),
-        );
-      },
-      child: DashboardCard(
-        value: overdueCount.toString(),
-        title: "OVERDUE BOOKS",
-        icon: Icons.upload,
-      ),
-    );
-  },
-),
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('borrow_requests')
+                    .where('status', isEqualTo: 'borrowed')
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  int overdueCount = 0;
+                  if (snapshot.hasData) {
+                    overdueCount = snapshot.data!.docs.where((doc) {
+                      final dueDate = toDateTime(doc['dueDate']);
+                      if (dueDate == null) return false;
+                      return dueDate.isBefore(DateTime.now());
+                    }).length;
+                  }
+                  return InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const OverdueBooksPage()),
+                      );
+                    },
+                    child: DashboardCard(
+                      value: overdueCount.toString(),
+                      title: "OVERDUE BOOKS",
+                      icon: Icons.upload,
+                    ),
+                  );
+                },
+              ),
 
               _buildCard(
                 value: counts['registrationRequests']?.toString() ?? '0',

@@ -1,14 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../logins/constants.dart';
-import '../../services/notificationservice.dart';
 
 class NotificationsPage extends StatelessWidget {
-  final NotificationService _notificationService = NotificationService();
-  final String userId = FirebaseAuth.instance.currentUser!.uid;
-
-  NotificationsPage({super.key});
+  const NotificationsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -24,57 +18,60 @@ class NotificationsPage extends StatelessWidget {
           child: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
-            title: const Text('Notifications',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold, color: Colors.white)),
+            title: const Text('Notifications', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back, color: Colors.white),
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.pop(context); // goes back to HomePage
               },
             ),
           ),
         ),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _notificationService.getNotificationsStream(userId),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final docs = snapshot.data!.docs;
-          if (docs.isEmpty) {
-            return const Center(
-                child: Text('No notifications',
-                    style: TextStyle(color: kPrimaryBrown, fontSize: 16)));
-          }
-
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: docs.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final data = docs[index];
-              final isUnread = !(data['read'] ?? false);
-
-              return GestureDetector(
-                onTap: () {
-                  if (isUnread) {
-                    _notificationService.markAsRead(userId, data.id);
-                  }
-                },
-                child: _buildNotificationCard(
-                  icon: Icons.notifications,
-                  title: data['title'] ?? '',
-                  subtitle: data['message'] ?? '',
-                  isUnread: isUnread,
-                  cardColor: isUnread ? const Color(0xFFE0DACE) : Colors.white,
-                ),
-              );
-            },
-          );
-        },
+      body: ListView(
+        padding: const EdgeInsets.all(16.0),
+        children: [
+          _buildNotificationCard(
+            icon: Icons.access_time,
+            title: 'Due date reminder',
+            subtitle: 'Your loan for \'Data Structures\' is due in 3 days',
+            isUnread: true,
+            cardColor: const Color(0xFFE0DACE),
+          ),
+          const SizedBox(height: 12),
+          _buildNotificationCard(
+            icon: Icons.library_books_outlined,
+            title: 'Book Available',
+            subtitle: 'The book \'Data Structures\' from your wishlist is now available',
+            isUnread: true,
+            cardColor: const Color(0xFFE0DACE),
+          ),
+          const SizedBox(height: 12),
+          _buildNotificationCard(
+            icon: Icons.check_circle_outline,
+            title: 'Registration Approved',
+            subtitle: 'Your request for book bank has been approved!',
+            isUnread: true,
+            cardColor: const Color(0xFFE0DACE),
+          ),
+          const SizedBox(height: 12),
+          _buildNotificationCard(
+            icon: Icons.error_outline,
+            iconColor: Colors.red,
+            title: 'Overdue Notice',
+            subtitle: 'Please return \'Data Structures\' - its now 2 days overdue',
+            isUnread: false,
+            cardColor: Colors.white,
+          ),
+          const SizedBox(height: 12),
+          _buildNotificationCard(
+            icon: Icons.notifications_active_outlined,
+            title: 'Welcome to LibraEase!',
+            subtitle: 'Start exploring ......',
+            isUnread: false,
+            cardColor: Colors.white,
+          ),
+        ],
       ),
     );
   }
@@ -106,16 +103,22 @@ class NotificationsPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: kPrimaryBrown)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: kPrimaryBrown,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(subtitle,
-                    style: TextStyle(
-                        fontSize: 14,
-                        color: kPrimaryBrown.withOpacity(0.8))),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: kPrimaryBrown.withOpacity(0.8),
+                  ),
+                ),
               ],
             ),
           ),

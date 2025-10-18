@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'screens/logins/splash_screen.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'services/notification_scheduler.dart';
 
 late FirebaseFirestore db;
 
@@ -12,8 +11,6 @@ void main() async {
   await Firebase.initializeApp();
 
   db = FirebaseFirestore.instance;
-
-  NotificationScheduler().startScheduler();
 
   runApp(const MyApp());
 }

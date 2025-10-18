@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../utils/firestore_helpers.dart';
 import 'package:libra/screens/adminhomepage/manageregpage.dart';
+// import 'package:libra/screens/adminhomepage/add_ebooks_page.dart' hide Padding;
 import '../../widgets/dashboardcard.dart';
 import 'add_book_page.dart';
-import 'borrow_request_page.dart'; // import the borrow requests page
+import 'borrow_request_page.dart';
 import 'overdue_books.dart';
 
 class DashboardGrid extends StatelessWidget {
@@ -119,8 +121,9 @@ class DashboardGrid extends StatelessWidget {
               if (snapshot.hasData) {
                 final docs = snapshot.data!.docs;
                 overdueCount = docs.where((doc) {
-                  final dueDate = (doc['dueDate'] as Timestamp).toDate();
-                  return dueDate.isBefore(today);
+                  final raw = doc['dueDate'];
+                  final dueDate = toDateTime(raw);
+                  return dueDate != null && dueDate.isBefore(today);
                 }).length;
               }
 
@@ -169,6 +172,19 @@ class DashboardGrid extends StatelessWidget {
                   );
                 },
               );
+            },
+          ),
+
+          // ✅ Add E-Books card (admin-only)
+          DashboardCard(
+            value: '-',
+            title: "ADD E-BOOKS",
+            icon: Icons.cloud_download,
+            onTap: () {
+              // Navigator.push(
+              //   // context,
+              //   // MaterialPageRoute(builder: (_) => const AddEBooksPage()),
+              // );
             },
           ),
         ],

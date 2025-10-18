@@ -13,11 +13,13 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   final user = FirebaseAuth.instance.currentUser;
-  Map<String, int> stats = {
+  // stats: ebooksRead, wishlist, reviews (kept), overdue, fineTotal
+  Map<String, dynamic> stats = {
     'ebooksRead': 0,
     'wishlist': 0,
     'reviews': 0,
     'overdue': 0,
+    'fineTotal': 0.0,
   };
 
   @override
@@ -54,6 +56,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
       int ebooksReadCount = 0;
       int overdueCount = 0;
+      double fineTotal = 0.0;
+      const double finePerDay = 5.0; // currency units per overdue day
       final now = DateTime.now();
 
       for (var doc in borrowSnap.docs) {
@@ -75,6 +79,10 @@ class _ProfilePageState extends State<ProfilePage> {
             dueDate != null &&
             dueDate.isBefore(now)) {
           overdueCount++;
+          final daysOverdue = now.difference(dueDate).inDays;
+          if (daysOverdue > 0) {
+            fineTotal += daysOverdue * finePerDay;
+          }
         }
       }
 
@@ -83,6 +91,7 @@ class _ProfilePageState extends State<ProfilePage> {
         stats['reviews'] = reviewsSnap.docs.length;
         stats['ebooksRead'] = ebooksReadCount;
         stats['overdue'] = overdueCount;
+        stats['fineTotal'] = fineTotal;
       });
     } catch (e) {
       debugPrint('Error fetching stats: $e');
@@ -268,9 +277,10 @@ class _ProfilePageState extends State<ProfilePage> {
             children: [
               Expanded(
                 child: _buildStatItem(
-                  icon: Icons.edit,
-                  value: stats['reviews'].toString(),
-                  label: 'Book Fines',
+                  icon: Icons.money_off,
+                  value:
+                      '₹${(stats['fineTotal'] as double).toStringAsFixed(2)}',
+                  label: 'Fines',
                 ),
               ),
               const SizedBox(width: 16),

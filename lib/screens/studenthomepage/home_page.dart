@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'browse_books_page.dart';
 import 'ebooks_page.dart';
 import 'borrow_history_page.dart';
 import 'registrations_page.dart';
-import 'previous_papers_page.dart';
 import 'Wishlist_page.dart';
-import 'notifications_page.dart';
 import 'Profile_page.dart';
 import '../logins/login_page_student.dart';
-import '../../services/notification_manager.dart';
+// notifications removed from HomePage per request
 
 // --- CONSTANT COLORS ---
 const Color kPrimaryBrown = Color.fromARGB(255, 87, 36, 14);
@@ -32,8 +29,7 @@ class _HomePageState extends State<HomePage>
   int _selectedIndex = 0;
   bool _isNavigating = false;
   final User? user = FirebaseAuth.instance.currentUser;
-  int _unreadNotificationCount = 0;
-  final NotificationManager _notificationManager = NotificationManager();
+  // notifications removed; unread count not used
 
   // Reduced image path for brevity, assuming it's correct
   final AssetImage backgroundImage =
@@ -46,38 +42,10 @@ class _HomePageState extends State<HomePage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       precacheImage(backgroundImage, context);
     });
-    _loadUnreadCount();
-    _listenToNotifications();
+    // notification polling/listening removed
   }
 
-  void _loadUnreadCount() async {
-    if (user != null) {
-      final count = await _notificationManager.getUnreadNotificationCount(user!.uid);
-      if (mounted) {
-        setState(() {
-          _unreadNotificationCount = count;
-        });
-      }
-    }
-  }
-
-  void _listenToNotifications() {
-    if (user != null) {
-      FirebaseFirestore.instance
-          .collection('users')
-          .doc(user!.uid)
-          .collection('notifications')
-          .where('read', isEqualTo: false)
-          .snapshots()
-          .listen((snapshot) {
-        if (mounted) {
-          setState(() {
-            _unreadNotificationCount = snapshot.docs.length;
-          });
-        }
-      });
-    }
-  }
+  // notification helpers removed
 
   void _signOut(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
@@ -99,12 +67,9 @@ class _HomePageState extends State<HomePage>
     Widget? nextPage;
     switch (index) {
       case 1:
-        nextPage = NotificationsPage();
-        break;
-      case 2:
         nextPage = const WishlistPage();
         break;
-      case 3:
+      case 2:
         nextPage = const ProfilePage();
         break;
     }
@@ -201,7 +166,7 @@ class _HomePageState extends State<HomePage>
             const Icon(Icons.search, color: kPrimaryBrown, size: 24),
             const SizedBox(width: 15),
             Text(
-              'Search books or e-resources...',
+              'Search Books ...',
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 16.5,
@@ -274,56 +239,7 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  Widget _buildWideMenuCard({
-    required BuildContext context,
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 80, // Increased height for better visibility
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            const SizedBox(width: 20),
-            Container(
-              height: 50,
-              width: 50,
-              decoration: BoxDecoration(
-                color: kPrimaryBrown,
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Icon(icon, color: Colors.white, size: 28),
-            ),
-            const SizedBox(width: 20),
-            Text(
-              title,
-              style: const TextStyle(
-                color: kPrimaryBrown,
-                fontWeight: FontWeight.w800,
-                fontSize: 17, // Increased font size
-              ),
-            ),
-            const Spacer(),
-            Icon(Icons.arrow_forward_ios, color: Colors.grey.withOpacity(0.5)),
-            const SizedBox(width: 20),
-          ],
-        ),
-      ),
-    );
-  }
+  // _buildWideMenuCard removed — unused after refactor
 
   Widget _buildBottomNavBar() {
     return Container(
@@ -359,50 +275,15 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _buildNavItem(IconData icon, int index) {
-    final isNotificationIcon = index == 1;
-    final showBadge = isNotificationIcon && _unreadNotificationCount > 0;
-
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        IconButton(
-          icon: Icon(
-            icon,
-            color: _selectedIndex == index
-                ? kLightCream
-                : kLightCream.withOpacity(0.6),
-            size: 30,
-          ),
-          onPressed: () => _onItemTapped(index),
-        ),
-        if (showBadge)
-          Positioned(
-            right: 8,
-            top: 8,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(
-                color: Colors.red,
-                shape: BoxShape.circle,
-              ),
-              constraints: const BoxConstraints(
-                minWidth: 18,
-                minHeight: 18,
-              ),
-              child: Text(
-                _unreadNotificationCount > 99
-                    ? '99+'
-                    : _unreadNotificationCount.toString(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-      ],
+    return IconButton(
+      icon: Icon(
+        icon,
+        color: _selectedIndex == index
+            ? kLightCream
+            : kLightCream.withOpacity(0.6),
+        size: 30,
+      ),
+      onPressed: () => _onItemTapped(index),
     );
   }
 
@@ -500,44 +381,18 @@ class _HomePageState extends State<HomePage>
                           ),
                           _buildMenuCard(
                             context: context,
-                            icon: Icons.description_outlined,
-                            title: 'PREVIOUS PAPERS',
-                            backgroundIcon: Icons.find_in_page,
+                            icon: Icons.history,
+                            title: 'BORROW HISTORY',
+                            backgroundIcon: Icons.history,
                             onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                    builder: (_) => const PreviousPapersPage()),
+                                    builder: (_) => const BorrowHistoryPage()),
                               );
                             },
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 30),
-
-                      const Text(
-                        'Your Activity',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: kLightCream,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Wide Card - Borrow History
-                      _buildWideMenuCard(
-                        context: context,
-                        icon: Icons.history,
-                        title: 'BORROW HISTORY',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const BorrowHistoryPage()),
-                          );
-                        },
                       ),
                       const SizedBox(height: 30),
 

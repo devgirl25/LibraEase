@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+// foundation and Platform imports removed — import-based ebook feature disabled
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../logins/constants.dart';
+
+// NOTE: The previous Google Books / import-function feature was removed.
+// This student-facing page now only displays available e-books and opens
+// previews. No network import or Cloud Function calls are made from here.
 
 class EBooksPage extends StatefulWidget {
   const EBooksPage({super.key});
@@ -13,12 +18,16 @@ class EBooksPage extends StatefulWidget {
 class _EBooksPageState extends State<EBooksPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  String _selectedCategory = 'All';
+  // flag reserved for future UI state
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
+
+  // Debug sample add removed to avoid calling remote import endpoints.
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +50,18 @@ class _EBooksPageState extends State<EBooksPage> {
 
           final docs = snapshot.data?.docs ?? [];
 
+          // build category list from docs
+          final categories = <String>{'All'};
+          for (var d in docs) {
+            final cat = (d.data()['category'] ?? '').toString();
+            if (cat.isNotEmpty) categories.add(cat);
+          }
+
+          // ensure selected category is valid
+          if (!categories.contains(_selectedCategory)) {
+            _selectedCategory = 'All';
+          }
+
           if (docs.isEmpty) {
             return const Center(
               child: Text(
@@ -54,8 +75,13 @@ class _EBooksPageState extends State<EBooksPage> {
             final data = doc.data();
             final title = (data['title'] ?? '').toString().toLowerCase();
             final author = (data['author'] ?? '').toString().toLowerCase();
+            final category = (data['category'] ?? '').toString();
             final query = _searchQuery.toLowerCase();
-            return title.contains(query) || author.contains(query);
+            final matchesQuery =
+                title.contains(query) || author.contains(query);
+            final matchesCategory =
+                _selectedCategory == 'All' || category == _selectedCategory;
+            return matchesQuery && matchesCategory;
           }).toList();
 
           if (filteredDocs.isEmpty) {
@@ -78,6 +104,7 @@ class _EBooksPageState extends State<EBooksPage> {
                 author: data['author'] ?? '',
                 category: data['category'] ?? 'Unknown',
                 pdfUrl: data['pdfUrl'] ?? '',
+                onOpenPreview: (url) => _openPreview(url),
               );
             },
           );
@@ -110,6 +137,8 @@ class _EBooksPageState extends State<EBooksPage> {
                     color: Colors.white,
                   ),
                 ),
+                // Debug-only sample add removed to avoid remote calls.
+                trailing: null,
               ),
               Padding(
                 padding:
@@ -135,11 +164,74 @@ class _EBooksPageState extends State<EBooksPage> {
                   ),
                 ),
               ),
+              // Category filter row
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                child: Row(
+                  children: [
+                    const Text('Category:',
+                        style: TextStyle(color: Colors.white)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _buildCategoryDropdown()),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildCategoryDropdown() {
+    // We'll fetch categories from the collection snapshot via a stream
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance.collection('ebooks').snapshots(),
+      builder: (context, snapshot) {
+        final docs = snapshot.data?.docs ?? [];
+        final categories = <String>['All'];
+        for (var d in docs) {
+          final cat = (d.data()['category'] ?? '').toString();
+          if (cat.isNotEmpty && !categories.contains(cat)) categories.add(cat);
+        }
+        return DropdownButtonFormField<String>(
+          initialValue: _selectedCategory,
+          items: categories
+              .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+              .toList(),
+          onChanged: (v) => setState(() {
+            _selectedCategory = v ?? 'All';
+          }),
+          decoration: const InputDecoration(
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(borderSide: BorderSide.none),
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          ),
+        );
+      },
+    );
+  }
+
+  // ----------------------
+  // Import from Google Books API
+  // ----------------------
+  // Import functionality has been moved to the Admin UI. Student-facing page
+  // only displays available ebooks now.
+
+  // Open pdf/preview in external browser (note: preventing download depends on provider)
+  Future<void> _openPreview(String url) async {
+    if (url.isEmpty) return;
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Cannot open link')));
+      }
+    }
   }
 }
 
@@ -149,6 +241,7 @@ class EBookListItem extends StatefulWidget {
   final String author;
   final String category;
   final String pdfUrl;
+  final void Function(String url)? onOpenPreview;
 
   const EBookListItem({
     super.key,
@@ -157,6 +250,7 @@ class EBookListItem extends StatefulWidget {
     required this.author,
     required this.category,
     required this.pdfUrl,
+    this.onOpenPreview,
   });
 
   @override
@@ -164,57 +258,7 @@ class EBookListItem extends StatefulWidget {
 }
 
 class _EBookListItemState extends State<EBookListItem> {
-  final user = FirebaseAuth.instance.currentUser;
-  bool isWishlisted = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkWishlist();
-  }
-
-  Future<void> _checkWishlist() async {
-    if (user == null) return;
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user!.uid)
-        .collection('ebook_wishlist')
-        .doc(widget.ebookId)
-        .get();
-    if (doc.exists) setState(() => isWishlisted = true);
-  }
-
-  Future<void> _toggleWishlist() async {
-    if (user == null) return;
-    final wishlistRef = FirebaseFirestore.instance
-        .collection('users')
-        .doc(user!.uid)
-        .collection('ebook_wishlist')
-        .doc(widget.ebookId);
-
-    if (isWishlisted) {
-      await wishlistRef.delete();
-      setState(() => isWishlisted = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Removed from Wishlist')));
-      }
-    } else {
-      await wishlistRef.set({
-        'ebookId': widget.ebookId,
-        'title': widget.title,
-        'author': widget.author,
-        'category': widget.category,
-        'pdfUrl': widget.pdfUrl,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-      setState(() => isWishlisted = true);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('E-Book added to Wishlist')));
-      }
-    }
-  }
+  // Wishlist removed from UI; this widget now displays ebook info + Read action only.
 
   @override
   Widget build(BuildContext context) {
@@ -291,6 +335,10 @@ class _EBookListItemState extends State<EBookListItem> {
                         ElevatedButton(
                           onPressed: () {
                             if (widget.pdfUrl.isNotEmpty) {
+                              if (widget.onOpenPreview != null) {
+                                widget.onOpenPreview!(widget.pdfUrl);
+                                return;
+                              }
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                     content:
@@ -316,17 +364,8 @@ class _EBookListItemState extends State<EBookListItem> {
                           child: const Text('Read Now',
                               style: TextStyle(fontSize: 12)),
                         ),
-                        GestureDetector(
-                          onTap: _toggleWishlist,
-                          child: Icon(
-                            isWishlisted
-                                ? Icons.bookmark
-                                : Icons.bookmark_border,
-                            color: isWishlisted
-                                ? kPrimaryBrown
-                                : kPrimaryBrown.withOpacity(0.7),
-                          ),
-                        ),
+                        // wishlist removed - no bookmark icon
+                        const SizedBox(width: 8),
                       ],
                     ),
                   ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/firestore_helpers.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -40,9 +41,7 @@ class BorrowRecord {
       status: (data['status'] == 'returned')
           ? BorrowStatus.returned
           : BorrowStatus.borrowed,
-      dueDate: data['dueDate'] != null
-          ? (data['dueDate'] as Timestamp).toDate()
-          : null,
+      dueDate: data['dueDate'] != null ? toDateTime(data['dueDate']) : null,
     );
   }
 }
@@ -77,10 +76,11 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
       backgroundColor: kScaffoldBackground,
       appBar: _buildAppBar(),
       body: StreamBuilder<QuerySnapshot>(
+        // Use the user's borrow_history subcollection to show every book they've borrowed
         stream: _firestore
-            .collection('borrow_requests')
-            .where('userId', isEqualTo: user!.uid)
-            .where('status', whereIn: ['accepted', 'returned'])
+            .collection('users')
+            .doc(user!.uid)
+            .collection('borrow_history')
             .orderBy('borrowDate', descending: true)
             .snapshots(),
         builder: (context, snapshot) {

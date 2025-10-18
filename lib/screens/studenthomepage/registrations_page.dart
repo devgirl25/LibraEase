@@ -145,22 +145,35 @@ class _RegistrationsPageState extends State<RegistrationsPage> {
                               DateTime.now().isAfter(lastRegistrationDate)
                           ? null
                           : () async {
-                              await FirebaseFirestore.instance
-                                  .collection('registration_requests')
-                                  .add({
-                                'userId': user!.uid,
-                                'studentName': user!.displayName ?? 'Student',
-                                'status': 'pending',
-                                'submittedAt': Timestamp.now(),
-                                'remarks': '',
-                              });
+                              try {
+                                await FirebaseFirestore.instance
+                                    .collection('registration_requests')
+                                    .add({
+                                  'userId': user!.uid,
+                                  'studentName': user!.displayName ?? 'Student',
+                                  'status': 'pending',
+                                  'submittedAt': Timestamp.now(),
+                                  'remarks': '',
+                                });
 
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content:
-                                      Text('Registration request submitted!'),
-                                ),
-                              );
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content:
+                                        Text('Registration request submitted!'),
+                                  ),
+                                );
+                              } catch (e, st) {
+                                // Log the error and show a helpful message to the user
+                                debugPrint(
+                                    'Failed to submit registration request: $e\n$st');
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                        'Registration failed: ${e.toString()}'),
+                                    backgroundColor: Colors.red[700],
+                                  ),
+                                );
+                              }
                             },
                       icon: const Icon(Icons.how_to_reg),
                       label: const Text('Register'),
