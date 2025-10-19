@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/firestore_helpers.dart';
+import 'notification_service.dart';
 
 class BorrowService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final NotificationService _notificationService = NotificationService();
 
   /// Borrow a book
   Future<void> borrowBook({
@@ -41,7 +43,13 @@ class BorrowService {
       'status': 'borrowed',
     });
 
-    // 3. Notification removed — clients can poll borrow_requests / history
+    // 3. Send confirmation notification
+    await _notificationService.sendNotification(
+      userId: userId,
+      title: 'Book Borrowed Successfully',
+      message: 'You have successfully borrowed "$bookTitle". Due date: ${dueDate.day}/${dueDate.month}/${dueDate.year}',
+      type: 'borrow_confirmation',
+    );
   }
 
   /// Renew a book
@@ -67,7 +75,13 @@ class BorrowService {
 
       await doc.reference.update({'dueDate': Timestamp.fromDate(newDueDate)});
 
-      // 2. Notification removed
+      // 2. Send renewal notification
+      await _notificationService.sendNotification(
+        userId: userId,
+        title: 'Book Renewed',
+        message: 'Your book "$bookTitle" has been renewed. New due date: ${newDueDate.day}/${newDueDate.month}/${newDueDate.year}',
+        type: 'renewal_confirmation',
+      );
     }
   }
 
@@ -98,7 +112,13 @@ class BorrowService {
         'available': true,
       });
 
-      // 3. Notification removed
+      // 3. Send return confirmation notification
+      await _notificationService.sendNotification(
+        userId: userId,
+        title: 'Book Returned',
+        message: 'You have successfully returned "$bookTitle". Thank you!',
+        type: 'return_confirmation',
+      );
     }
   }
 }

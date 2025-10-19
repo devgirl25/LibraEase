@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/notification_service.dart';
 import 'browse_books_page.dart';
 import 'ebooks_page.dart';
 import 'borrow_history_page.dart';
@@ -29,7 +30,7 @@ class _HomePageState extends State<HomePage>
   int _selectedIndex = 0;
   bool _isNavigating = false;
   final User? user = FirebaseAuth.instance.currentUser;
-  // notifications removed; unread count not used
+  final NotificationService _notificationService = NotificationService();
 
   // Reduced image path for brevity, assuming it's correct
   final AssetImage backgroundImage =
@@ -42,7 +43,8 @@ class _HomePageState extends State<HomePage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       precacheImage(backgroundImage, context);
     });
-    // notification polling/listening removed
+    // Start notification checking
+    _notificationService.startPeriodicNotificationCheck();
   }
 
   // notification helpers removed
