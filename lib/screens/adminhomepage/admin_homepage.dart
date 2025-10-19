@@ -143,7 +143,7 @@ class DashboardGrid extends StatelessWidget {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const UploadFormPage()),
+                MaterialPageRoute(builder: (_) => UploadFormPage()),
               );
             },
           ),
@@ -214,7 +214,7 @@ class DashboardGrid extends StatelessWidget {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const FinesPage()),
+                        MaterialPageRoute(builder: (_) => FinesPage()),
                       );
                     },
                   );

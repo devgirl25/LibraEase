@@ -40,6 +40,7 @@ class _UploadFormPageState extends State<UploadFormPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Upload Registration Form'),
+        foregroundColor: Colors.white,
         backgroundColor: Colors.brown,
       ),
       body: Padding(

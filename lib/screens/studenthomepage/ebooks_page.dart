@@ -22,70 +22,108 @@ class _EBooksPageState extends State<EBooksPage> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
       backgroundColor: kScaffoldBackground,
       appBar: _buildAppBar(context),
-      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: FirebaseFirestore.instance
-            .collection('ebooks')
-            .orderBy('title')
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = constraints.maxWidth > 600; // tablet breakpoint
 
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
+          return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: FirebaseFirestore.instance
+                .collection('ebooks')
+                .orderBy('title')
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-          final docs = snapshot.data?.docs ?? [];
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
 
-          if (docs.isEmpty) {
-            return const Center(
-              child: Text(
-                'No e-books available',
-                style: TextStyle(color: kPrimaryBrown, fontSize: 16),
-              ),
-            );
-          }
+              final docs = snapshot.data?.docs ?? [];
 
-          final filteredDocs = docs.where((doc) {
-            final data = doc.data();
-            final title = (data['title'] ?? '').toString().toLowerCase();
-            final author = (data['author'] ?? '').toString().toLowerCase();
-            final query = _searchQuery.toLowerCase();
-            return title.contains(query) || author.contains(query);
-          }).toList();
-
-          if (filteredDocs.isEmpty) {
-            return const Center(
-              child: Text(
-                'No e-books found',
-                style: TextStyle(color: kPrimaryBrown, fontSize: 16),
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            itemCount: filteredDocs.length,
-            itemBuilder: (context, index) {
-              final data = filteredDocs[index].data();
-              return Column(
-                children: [
-                  EBookListItem(
-                    ebookId: filteredDocs[index].id,
-                    title: data['title'] ?? '',
-                    author: data['author'] ?? '',
-                    category: data['category'] ?? 'Unknown',
-                    pdfUrl: data['pdfUrl'] ?? '',
-                    imageUrl: data['imageUrl'] ?? '',
-                    onOpenPreview: (url) => _openPreview(url),
+              if (docs.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'No e-books available',
+                    style: TextStyle(color: kPrimaryBrown, fontSize: 16),
                   ),
-                  const SizedBox(height: 12), // spacing between cards
-                ],
-              );
+                );
+              }
+
+              final filteredDocs = docs.where((doc) {
+                final data = doc.data();
+                final title = (data['title'] ?? '').toString().toLowerCase();
+                final author = (data['author'] ?? '').toString().toLowerCase();
+                final query = _searchQuery.toLowerCase();
+                return title.contains(query) || author.contains(query);
+              }).toList();
+
+              if (filteredDocs.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'No e-books found',
+                    style: TextStyle(color: kPrimaryBrown, fontSize: 16),
+                  ),
+                );
+              }
+
+              // 🟢 Responsive list/grid view
+              if (isWide) {
+                // Grid for tablets/web
+                return GridView.builder(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  itemCount: filteredDocs.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 20,
+                    mainAxisSpacing: 20,
+                    childAspectRatio: 3.2,
+                  ),
+                  itemBuilder: (context, index) {
+                    final data = filteredDocs[index].data();
+                    return EBookListItem(
+                      ebookId: filteredDocs[index].id,
+                      title: data['title'] ?? '',
+                      author: data['author'] ?? '',
+                      category: data['category'] ?? 'Unknown',
+                      pdfUrl: data['pdfUrl'] ?? '',
+                      imageUrl: data['imageUrl'] ?? '',
+                      onOpenPreview: (url) => _openPreview(url),
+                    );
+                  },
+                );
+              } else {
+                // List for mobile
+                return ListView.builder(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  itemCount: filteredDocs.length,
+                  itemBuilder: (context, index) {
+                    final data = filteredDocs[index].data();
+                    return Column(
+                      children: [
+                        EBookListItem(
+                          ebookId: filteredDocs[index].id,
+                          title: data['title'] ?? '',
+                          author: data['author'] ?? '',
+                          category: data['category'] ?? 'Unknown',
+                          pdfUrl: data['pdfUrl'] ?? '',
+                          imageUrl: data['imageUrl'] ?? '',
+                          onOpenPreview: (url) => _openPreview(url),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                    );
+                  },
+                );
+              }
             },
           );
         },
@@ -117,11 +155,7 @@ class _EBooksPageState extends State<EBooksPage> {
                     color: Colors.white,
                   ),
                 ),
-                trailing: null,
               ),
-
-              const SizedBox(height: 16), // gap between AppBar and search box
-
               Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -146,9 +180,6 @@ class _EBooksPageState extends State<EBooksPage> {
                   ),
                 ),
               ),
-
-              const SizedBox(
-                  height: 12), // gap between search box and books list
             ],
           ),
         ),
@@ -197,18 +228,22 @@ class EBookListItem extends StatefulWidget {
 class _EBookListItemState extends State<EBookListItem> {
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isWide = screenWidth > 600;
+
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(isWide ? 16 : 12),
       decoration: BoxDecoration(
         color: const Color(0xFFEAE3DC),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment:
+            isWide ? CrossAxisAlignment.center : CrossAxisAlignment.start,
         children: [
           Container(
-            width: 80,
-            height: 110,
+            width: isWide ? 100 : 80,
+            height: isWide ? 130 : 110,
             decoration: BoxDecoration(
               color: Colors.grey[300],
               borderRadius: BorderRadius.circular(10),
@@ -227,10 +262,10 @@ class _EBookListItemState extends State<EBookListItem> {
                   )
                 : const Icon(Icons.menu_book, color: kPrimaryBrown, size: 40),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: isWide ? 24 : 16),
           Expanded(
             child: SizedBox(
-              height: 110,
+              height: isWide ? 130 : 110,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -242,9 +277,9 @@ class _EBookListItemState extends State<EBookListItem> {
                         widget.title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                          fontSize: isWide ? 18 : 16,
                           color: kPrimaryBrown,
                         ),
                       ),
@@ -254,47 +289,38 @@ class _EBookListItemState extends State<EBookListItem> {
                             ? widget.author
                             : 'Unknown author',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: isWide ? 13 : 12,
                           color: kPrimaryBrown.withOpacity(0.7),
                         ),
                       ),
                     ],
                   ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      ElevatedButton(
-                        onPressed: () {
-                          if (widget.pdfUrl.isNotEmpty) {
-                            if (widget.onOpenPreview != null) {
-                              widget.onOpenPreview!(widget.pdfUrl);
-                              return;
-                            }
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                  content: Text('Opening ${widget.title}...')),
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('PDF not available')),
-                            );
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: kPrimaryBrown,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          minimumSize: const Size(0, 30),
+                  Align(
+                    alignment:
+                        isWide ? Alignment.centerLeft : Alignment.centerRight,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (widget.pdfUrl.isNotEmpty) {
+                          widget.onOpenPreview?.call(widget.pdfUrl);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('PDF not available')),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: kPrimaryBrown,
+                        foregroundColor: Colors.white,
+                        padding:
+                            EdgeInsets.symmetric(horizontal: isWide ? 16 : 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Text('Read Now',
-                            style: TextStyle(fontSize: 12)),
+                        minimumSize: const Size(0, 30),
                       ),
-                    ],
+                      child: Text('Read Now',
+                          style: TextStyle(fontSize: isWide ? 14 : 12)),
+                    ),
                   ),
                 ],
               ),
