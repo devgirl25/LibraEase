@@ -8,6 +8,7 @@ import 'add_book_page.dart';
 import 'borrow_request_page.dart';
 import 'overdue_books.dart';
 import 'fines_page.dart';
+import 'uploadformpage.dart';
 
 class DashboardGrid extends StatelessWidget {
   const DashboardGrid({super.key});
@@ -134,34 +135,15 @@ class DashboardGrid extends StatelessWidget {
             },
           ),
 
-          // ✅ Registration Requests card
-          StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('registration_requests')
-                .where('status', isEqualTo: 'pending')
-                .snapshots(),
-            builder: (context, snapshot) {
-              String countText = "0";
-
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                countText = "...";
-              } else if (snapshot.hasError) {
-                countText = "Err";
-              } else if (snapshot.hasData) {
-                countText = snapshot.data!.docs.length.toString();
-              }
-
-              return DashboardCard(
-                value: countText,
-                title: "REGISTRATION REQUESTS",
-                icon: Icons.person_add,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const ManageRegRequestsPage()),
-                  );
-                },
+// ✅ Upload Registration Form card
+          DashboardCard(
+            value: '+',
+            title: "UPLOAD FORM",
+            icon: Icons.upload_file,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const UploadFormPage()),
               );
             },
           ),
@@ -183,62 +165,63 @@ class DashboardGrid extends StatelessWidget {
           // Inside your GridView children:
 
           StreamBuilder<QuerySnapshot>(
-  stream: FirebaseFirestore.instance.collection('users').snapshots(),
-  builder: (context, snapshot) {
-    if (!snapshot.hasData) {
-      return DashboardCard(
-        value: '...',
-        title: "FINES",
-        icon: Icons.money_off,
-        onTap: () {},
-      );
-    }
+            stream: FirebaseFirestore.instance.collection('users').snapshots(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return DashboardCard(
+                  value: '...',
+                  title: "FINES",
+                  icon: Icons.money_off,
+                  onTap: () {},
+                );
+              }
 
-    final users = snapshot.data!.docs;
+              final users = snapshot.data!.docs;
 
-    final futures = users.map<Future<double>>((userDoc) async {
-      final statsSnap = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userDoc.id)
-          .collection('stats')
-          .doc('latest')
-          .get();
+              final futures = users.map<Future<double>>((userDoc) async {
+                final statsSnap = await FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(userDoc.id)
+                    .collection('stats')
+                    .doc('latest')
+                    .get();
 
-      if (statsSnap.exists) {
-        return (statsSnap['fineTotal'] ?? 0.0).toDouble();
-      }
-      return 0.0;
-    }).toList();
+                if (statsSnap.exists) {
+                  return (statsSnap['fineTotal'] ?? 0.0).toDouble();
+                }
+                return 0.0;
+              }).toList();
 
-    return FutureBuilder<List<double>>(
-      future: Future.wait(futures),
-      builder: (context, finesSnapshot) {
-        if (!finesSnapshot.hasData) {
-          return DashboardCard(
-            value: '...',
-            title: "FINES",
-            icon: Icons.money_off,
-            onTap: () {},
-          );
-        }
+              return FutureBuilder<List<double>>(
+                future: Future.wait(futures),
+                builder: (context, finesSnapshot) {
+                  if (!finesSnapshot.hasData) {
+                    return DashboardCard(
+                      value: '...',
+                      title: "FINES",
+                      icon: Icons.money_off,
+                      onTap: () {},
+                    );
+                  }
 
-        double totalFines = finesSnapshot.data!.fold(0.0, (a, b) => a + b);
+                  double totalFines =
+                      finesSnapshot.data!.fold(0.0, (a, b) => a + b);
 
-        return DashboardCard(
-          value: "₹${totalFines.toStringAsFixed(2)}",
-          title: "FINES",
-          icon: Icons.money_off,
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const FinesPage()),
-            );
-          },
-        );
-      },
-    );
-  },
-),
+                  return DashboardCard(
+                    value: "₹${totalFines.toStringAsFixed(2)}",
+                    title: "FINES",
+                    icon: Icons.money_off,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const FinesPage()),
+                      );
+                    },
+                  );
+                },
+              );
+            },
+          ),
         ],
       ),
     );
