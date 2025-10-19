@@ -25,6 +25,7 @@ dependencies:
   # Image Picker (pick images from gallery or camera)
   image_picker: ^1.2.0
 
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

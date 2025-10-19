@@ -87,6 +87,7 @@ class _AddBookPageState extends State<AddBookPage> {
       appBar: AppBar(
         title: const Text('Add Books'),
         backgroundColor: const Color(0xFF255A5A),
+        foregroundColor: Colors.white,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -176,6 +177,8 @@ class _AddBookPageState extends State<AddBookPage> {
                         icon: const Icon(Icons.camera_alt),
                         label: const Text("Camera"),
                         style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          iconColor: Colors.white,
                           backgroundColor: const Color(0xFF255A5A),
                         ),
                         onPressed: () => _pickImage(ImageSource.camera),
@@ -185,6 +188,8 @@ class _AddBookPageState extends State<AddBookPage> {
                         icon: const Icon(Icons.photo_library),
                         label: const Text("Gallery"),
                         style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          iconColor: Colors.white,
                           backgroundColor: const Color(0xFF255A5A),
                         ),
                         onPressed: () => _pickImage(ImageSource.gallery),
@@ -200,6 +205,7 @@ class _AddBookPageState extends State<AddBookPage> {
                     : ElevatedButton(
                         onPressed: _uploadBookWithImage,
                         style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.white,
                           backgroundColor: const Color(0xFF255A5A),
                           minimumSize: const Size.fromHeight(50),
                         ),

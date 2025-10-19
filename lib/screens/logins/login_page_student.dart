@@ -2,8 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'Signup_page_student.dart';
 import 'Forgot_password.dart';
-import '../studenthomepage/Home_page.dart'; // Navigate here after login
-import 'Select_user_type.dart'; // For back navigation
+import '../studenthomepage/Home_page.dart';
+import 'Select_user_type.dart';
 
 class LoginStudentScreen extends StatefulWidget {
   const LoginStudentScreen({super.key});
@@ -24,87 +24,134 @@ class _LoginStudentScreenState extends State<LoginStudentScreen> {
     super.dispose();
   }
 
-  // ✅ Option 2: Full Firebase login with loading indicator and error handling
-  void _login() async {
-  if (_formKey.currentState!.validate()) {
-    // Show loading spinner
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(color: Colors.brown),
+  // 🌟 Custom Styled SnackBar
+  void showCustomSnackBar(BuildContext context, String message,
+      {bool isError = false}) {
+    final color = isError ? const Color(0xFFB71C1C) : const Color(0xFF255A5A);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        content: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isError
+                  ? [const Color(0xFFD32F2F), const Color(0xFFB71C1C)]
+                  : [const Color(0xFF4E7D7D), const Color(0xFF255A5A)],
+            ),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 6,
+                offset: const Offset(2, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Icon(
+                isError ? Icons.error_outline : Icons.check_circle_outline,
+                color: Colors.white,
+                size: 26,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  message,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        duration: const Duration(seconds: 3),
       ),
     );
+  }
 
-    try {
-      // Try signing in with Firebase
-      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
+  // 🔐 Login function
+  void _login() async {
+    if (_formKey.currentState!.validate()) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(color: Colors.brown),
+        ),
       );
 
-      if (!mounted) return;
-      Navigator.pop(context); // Close loading dialog
-
-      if (credential.user != null) {
-        // Successful login
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomePage()),
+      try {
+        final credential =
+            await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: emailController.text.trim(),
+          password: passwordController.text.trim(),
         );
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Login successful!')),
-        );
+        if (!mounted) return;
+        Navigator.pop(context);
+
+        if (credential.user != null) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomePage()),
+          );
+
+          showCustomSnackBar(
+              context, '🎉 Login successful! Welcome back to LibraEase.');
+        }
+      } on FirebaseAuthException catch (e) {
+        if (!mounted) return;
+        Navigator.pop(context);
+
+        String message;
+        switch (e.code) {
+          case 'network-request-failed':
+            message = 'No Internet connection. Please check your network.';
+            break;
+          case 'user-not-found':
+            message = 'No user found for that email.';
+            break;
+          case 'wrong-password':
+            message = 'Wrong password provided.';
+            break;
+          case 'invalid-email':
+            message = 'Invalid email format.';
+            break;
+          case 'user-disabled':
+            message = 'This account has been disabled.';
+            break;
+          default:
+            message = e.message ?? 'Login failed. Please try again.';
+        }
+
+        showCustomSnackBar(context, message, isError: true);
+      } catch (e) {
+        if (!mounted) return;
+        Navigator.pop(context);
+
+        String errorMessage;
+        if (e.toString().contains('network') ||
+            e.toString().contains('SocketException')) {
+          errorMessage = 'No Internet connection. Please check your network.';
+        } else {
+          errorMessage = 'Unexpected error occurred: $e';
+        }
+
+        showCustomSnackBar(context, errorMessage, isError: true);
       }
-    } on FirebaseAuthException catch (e) {
-      if (!mounted) return;
-      Navigator.pop(context);
-
-      String message;
-      switch (e.code) {
-        case 'network-request-failed':
-          message = 'No Internet connection. Please check your network.';
-          break;
-        case 'user-not-found':
-          message = 'No user found for that email.';
-          break;
-        case 'wrong-password':
-          message = 'Wrong password provided.';
-          break;
-        case 'invalid-email':
-          message = 'Invalid email format.';
-          break;
-        case 'user-disabled':
-          message = 'This account has been disabled.';
-          break;
-        default:
-          message = e.message ?? 'Login failed. Please try again.';
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      Navigator.pop(context);
-
-      // For general or unexpected errors (like no network)
-      String errorMessage;
-      if (e.toString().contains('network') ||
-          e.toString().contains('SocketException')) {
-        errorMessage = 'No Internet connection. Please check your network.';
-      } else {
-        errorMessage = 'Unexpected error occurred: $e';
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage)),
-      );
     }
   }
-}
-
 
   Widget _circle(double size, Color color) {
     return Container(
@@ -120,7 +167,7 @@ class _LoginStudentScreenState extends State<LoginStudentScreen> {
       backgroundColor: const Color.fromARGB(255, 210, 189, 166),
       body: Stack(
         children: [
-          // Background circles (for decoration)
+          // Decorative circles
           Positioned(
               left: -50,
               top: -30,
@@ -175,7 +222,7 @@ class _LoginStudentScreenState extends State<LoginStudentScreen> {
                     ),
                     const SizedBox(height: 30),
 
-                    // Student label box
+                    // Student label
                     Container(
                       height: 40,
                       width: 180,
@@ -235,7 +282,7 @@ class _LoginStudentScreenState extends State<LoginStudentScreen> {
                     ),
                     const SizedBox(height: 10),
 
-                    // Forgot password link
+                    // Forgot password
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(

@@ -21,10 +21,65 @@ class _LoginAdminScreenState extends State<LoginAdminScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // 🌟 Custom Styled SnackBar
+  void showCustomSnackBar(BuildContext context, String message,
+      {bool isError = false}) {
+    final color = isError ? const Color(0xFFB71C1C) : const Color(0xFF255A5A);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        content: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isError
+                  ? [const Color(0xFFD32F2F), const Color(0xFFB71C1C)]
+                  : [const Color(0xFF4E7D7D), const Color(0xFF255A5A)],
+            ),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 6,
+                offset: const Offset(2, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Icon(
+                isError ? Icons.error_outline : Icons.check_circle_outline,
+                color: Colors.white,
+                size: 26,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  message,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   // ✅ UPDATED ADMIN LOGIN FUNCTION
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
 
     try {
@@ -46,9 +101,7 @@ class _LoginAdminScreenState extends State<LoginAdminScreen> {
       if (adminDoc.exists) {
         // ✅ Admin verified
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Admin login successful!')),
-        );
+        showCustomSnackBar(context, '✅ Admin login successful!');
 
         Navigator.pushReplacement(
           context,
@@ -58,9 +111,8 @@ class _LoginAdminScreenState extends State<LoginAdminScreen> {
         // ❌ Not in Admin collection → sign out
         await _auth.signOut();
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Access denied — not an admin account')),
-        );
+        showCustomSnackBar(context, 'Access denied — not an admin account',
+            isError: true);
       }
     } on FirebaseAuthException catch (e) {
       String message = 'Login failed';
@@ -71,14 +123,11 @@ class _LoginAdminScreenState extends State<LoginAdminScreen> {
       } else if (e.code == 'invalid-email') {
         message = 'Invalid email format';
       }
-
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
+      showCustomSnackBar(context, message, isError: true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: $e')));
+      showCustomSnackBar(context, 'Error: $e', isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -89,6 +138,15 @@ class _LoginAdminScreenState extends State<LoginAdminScreen> {
     emailController.dispose();
     passwordController.dispose();
     super.dispose();
+  }
+
+  // Circle Decoration
+  Widget _circle(double size, Color color) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    );
   }
 
   @override
@@ -260,15 +318,6 @@ class _LoginAdminScreenState extends State<LoginAdminScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  // Circle Decoration
-  Widget _circle(double size, Color color) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
   }
 }

@@ -13,88 +13,78 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   final user = FirebaseAuth.instance.currentUser;
-  // stats: ebooksRead, wishlist, reviews (kept), overdue, fineTotal
-  Map<String, dynamic> stats = {
-    'ebooksRead': 0,
-    'wishlist': 0,
-    'reviews': 0,
-    'overdue': 0,
-    'fineTotal': 0.0,
-  };
 
   @override
   void initState() {
     super.initState();
-    if (user != null) _fetchUserStats();
+    if (user != null) {
+      _initializeStats();
+    }
   }
 
-  Future<void> _fetchUserStats() async {
+  /// Calculates and stores stats in Firestore under users/{uid}/stats/latest
+  Future<void> _initializeStats() async {
+    if (user == null) return;
+
     final uid = user!.uid;
     final firestore = FirebaseFirestore.instance;
 
     try {
-      // Wishlist count
+      // Fetch wishlist
       final wishlistSnap = await firestore
           .collection('users')
           .doc(uid)
           .collection('wishlist')
           .get();
 
-      // Reviews count
-      final reviewsSnap = await firestore
-          .collection('users')
-          .doc(uid)
-          .collection('reviews')
-          .get();
-
-      // Borrow history
+      // Fetch borrow requests
       final borrowSnap = await firestore
-          .collection('users')
-          .doc(uid)
-          .collection('borrow_history')
+          .collection('borrow_requests')
+          .where('userId', isEqualTo: uid)
           .get();
 
       int ebooksReadCount = 0;
       int overdueCount = 0;
       double fineTotal = 0.0;
-      const double finePerDay = 5.0; // currency units per overdue day
+      const double finePerDay = 15.0;
       final now = DateTime.now();
 
       for (var doc in borrowSnap.docs) {
         final data = doc.data();
-        final status = data['status'] ?? '';
+        final status = (data['status'] ?? '').toString().toLowerCase();
         final dueDateRaw = data['dueDate'];
 
-        // Convert dueDate to DateTime safely
         DateTime? dueDate;
-        if (dueDateRaw is Timestamp) {
+        if (dueDateRaw is Timestamp)
           dueDate = dueDateRaw.toDate();
-        } else if (dueDateRaw is String) {
-          dueDate = DateTime.tryParse(dueDateRaw);
-        }
+        else if (dueDateRaw is String) dueDate = DateTime.tryParse(dueDateRaw);
 
         if (status == 'returned') {
           ebooksReadCount++;
-        } else if (status == 'borrowed' &&
+        } else if (status == 'accepted' &&
             dueDate != null &&
             dueDate.isBefore(now)) {
           overdueCount++;
           final daysOverdue = now.difference(dueDate).inDays;
-          if (daysOverdue > 0) {
-            fineTotal += daysOverdue * finePerDay;
-          }
+          if (daysOverdue > 0) fineTotal += daysOverdue * finePerDay;
         }
       }
 
-      setState(() {
-        stats['wishlist'] = wishlistSnap.docs.length;
-        stats['reviews'] = reviewsSnap.docs.length;
-        stats['ebooksRead'] = ebooksReadCount;
-        stats['overdue'] = overdueCount;
-        stats['fineTotal'] = fineTotal;
-      });
+      // Store stats in Firestore
+      await firestore
+          .collection('users')
+          .doc(uid)
+          .collection('stats')
+          .doc('latest')
+          .set({
+        'ebooksRead': ebooksReadCount,
+        'wishlist': wishlistSnap.docs.length,
+        'overdue': overdueCount,
+        'fineTotal': fineTotal,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Error fetching stats: $e');
+      debugPrint('⚠️ Error initializing stats: $e');
     }
   }
 
@@ -117,7 +107,9 @@ class _ProfilePageState extends State<ProfilePage> {
             children: [
               _buildUserInfoCard(),
               const SizedBox(height: 20),
-              _buildStatisticsCard(context),
+              _buildStatisticsCard(),
+              const SizedBox(height: 30),
+              _buildLogoutButton(),
             ],
           ),
         ),
@@ -185,138 +177,133 @@ class _ProfilePageState extends State<ProfilePage> {
               )
             ],
           ),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF5F1ED),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              children: [
-                const CircleAvatar(
-                  radius: 30,
-                  backgroundColor: kPrimaryBrown,
-                  child: Icon(Icons.person, color: Colors.white, size: 40),
-                ),
-                const SizedBox(width: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: kPrimaryBrown,
-                      ),
+          child: Row(
+            children: [
+              const CircleAvatar(
+                radius: 30,
+                backgroundColor: kPrimaryBrown,
+                child: Icon(Icons.person, color: Colors.white, size: 40),
+              ),
+              const SizedBox(width: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: kPrimaryBrown,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      email,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: kPrimaryBrown.withOpacity(0.7),
-                      ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    email,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: kPrimaryBrown.withOpacity(0.7),
                     ),
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                ],
+              ),
+            ],
           ),
         );
       },
     );
   }
 
-  Widget _buildStatisticsCard(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(25),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          )
-        ],
-      ),
-      child: Column(
-        children: [
-          const Text(
-            'Statistics',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: kPrimaryBrown,
-            ),
+  Widget _buildStatisticsCard() {
+    final uid = user!.uid;
+
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('stats')
+          .doc('latest')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final data = snapshot.data!.data() ??
+            {
+              'ebooksRead': 0,
+              'wishlist': 0,
+              'overdue': 0,
+              'fineTotal': 0.0,
+            };
+
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(25),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              )
+            ],
           ),
-          const SizedBox(height: 20),
-          Row(
+          child: Column(
             children: [
-              Expanded(
-                child: _buildStatItem(
-                  icon: Icons.menu_book,
-                  value: stats['ebooksRead'].toString(),
-                  label: 'Books Read',
+              const Text(
+                'Statistics',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: kPrimaryBrown,
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildStatItem(
-                  icon: Icons.playlist_add_check,
-                  value: stats['wishlist'].toString(),
-                  label: 'Wishlist',
-                ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStatItem(
+                      icon: Icons.menu_book,
+                      value: (data['ebooksRead'] ?? 0).toString(),
+                      label: 'Books Read',
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildStatItem(
+                      icon: Icons.playlist_add_check,
+                      value: (data['wishlist'] ?? 0).toString(),
+                      label: 'Wishlist',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStatItem(
+                      icon: Icons.timer_off_outlined,
+                      value: (data['overdue'] ?? 0).toString(),
+                      label: 'Overdue Books',
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildStatItem(
+                      icon: Icons.money_off,
+                      value:
+                          '₹${(data['fineTotal'] ?? 0.0).toStringAsFixed(2)}',
+                      label: 'Fines',
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatItem(
-                  icon: Icons.money_off,
-                  value:
-                      '₹${(stats['fineTotal'] as double).toStringAsFixed(2)}',
-                  label: 'Fines',
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildStatItem(
-                  icon: Icons.timer_off_outlined,
-                  value: stats['overdue'].toString(),
-                  label: 'Overdue books',
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 30),
-          OutlinedButton.icon(
-            onPressed: () {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const LoginStudentScreen(),
-                ),
-                (route) => false,
-              );
-            },
-            icon: const Icon(Icons.logout),
-            label: const Text('Log Out'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: kPrimaryBrown,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              side: const BorderSide(color: kPrimaryBrown),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
-              ),
-            ),
-          )
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -354,6 +341,30 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLogoutButton() {
+    return OutlinedButton.icon(
+      onPressed: () async {
+        await FirebaseAuth.instance.signOut();
+        if (!mounted) return;
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginStudentScreen()),
+          (route) => false,
+        );
+      },
+      icon: const Icon(Icons.logout),
+      label: const Text('Log Out'),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: kPrimaryBrown,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        side: const BorderSide(color: kPrimaryBrown),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(30),
+        ),
       ),
     );
   }

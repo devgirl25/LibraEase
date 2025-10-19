@@ -15,6 +15,15 @@ class BrowseBooksPage extends StatefulWidget {
 
 class _BrowseBooksPageState extends State<BrowseBooksPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  String _availabilityFilter = 'All'; // All, Available, Unavailable
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,46 +31,131 @@ class _BrowseBooksPageState extends State<BrowseBooksPage> {
       backgroundColor: kLightCream,
       appBar: AppBar(
         backgroundColor: kPrimaryBrown,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: const Text(
           'Browse Books',
           style: TextStyle(color: Colors.white),
         ),
         centerTitle: true,
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _firestore.collection('books').snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-                child: CircularProgressIndicator(color: kPrimaryBrown));
-          }
+      body: Column(
+        children: [
+          // ----------------- Search Bar -----------------
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value.toLowerCase();
+                });
+              },
+              decoration: InputDecoration(
+                hintText: 'Search Book by title ',
+                prefixIcon: const Icon(Icons.search, color: kPrimaryBrown),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: Colors.white,
+              ),
+            ),
+          ),
 
-          if (snapshot.hasError) {
-            return const Center(child: Text('Error loading books.'));
-          }
+          // ----------------- Availability Filter -----------------
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: Row(
+              children: [
+                const Text('Filter :', style: TextStyle(color: kPrimaryBrown)),
+                const SizedBox(width: 12),
+                DropdownButton<String>(
+                  value: _availabilityFilter,
+                  items: const [
+                    DropdownMenuItem(value: 'All', child: Text('All')),
+                    DropdownMenuItem(
+                        value: 'Available', child: Text('Available')),
+                    DropdownMenuItem(
+                        value: 'Unavailable', child: Text('Unavailable')),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _availabilityFilter = value ?? 'All';
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text('No books found.'));
-          }
+          // ----------------- Book List -----------------
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: _firestore.collection('books').snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                      child: CircularProgressIndicator(color: kPrimaryBrown));
+                }
 
-          final books = snapshot.data!.docs;
+                if (snapshot.hasError) {
+                  return const Center(child: Text('Error loading books.'));
+                }
 
-          return ListView.builder(
-            itemCount: books.length,
-            itemBuilder: (context, index) {
-              final data = books[index].data() as Map<String, dynamic>;
-              return BookListItem(
-                bookId: books[index].id,
-                title: data['title'] ?? 'Untitled',
-                author: data['author'] ?? 'Unknown Author',
-                description: data['description'] ?? 'No description available.',
-                imageUrl: data['imageUrl'] ?? '',
-                category: data['category'] ?? 'General',
-                available: data['available'] ?? true,
-              );
-            },
-          );
-        },
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(child: Text('No books found.'));
+                }
+
+                final books = snapshot.data!.docs.where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final title = (data['title'] ?? '').toString().toLowerCase();
+                  final author =
+                      (data['author'] ?? '').toString().toLowerCase();
+                  final available = (data['available'] ?? true) as bool;
+
+                  // Search filter
+                  final matchesSearch = title.contains(_searchQuery) ||
+                      author.contains(_searchQuery);
+
+                  // Availability filter
+                  bool matchesAvailability = true;
+                  if (_availabilityFilter == 'Available')
+                    matchesAvailability = available;
+                  if (_availabilityFilter == 'Unavailable')
+                    matchesAvailability = !available;
+
+                  return matchesSearch && matchesAvailability;
+                }).toList();
+
+                if (books.isEmpty) {
+                  return const Center(
+                      child: Text('No books found matching filters.'));
+                }
+
+                return ListView.builder(
+                  itemCount: books.length,
+                  itemBuilder: (context, index) {
+                    final data = books[index].data() as Map<String, dynamic>;
+                    return BookListItem(
+                      bookId: books[index].id,
+                      title: data['title'] ?? 'Untitled',
+                      author: data['author'] ?? 'Unknown Author',
+                      description:
+                          data['description'] ?? 'No description available.',
+                      imageUrl: data['imageUrl'] ?? '',
+                      category: data['category'] ?? 'General',
+                      available: data['available'] ?? true,
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -100,8 +194,8 @@ class BookListItem extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 child: Image.network(
                   imageUrl,
-                  width: 60,
-                  height: 80,
+                  width: 65,
+                  height: 100,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) =>
                       const Icon(Icons.book, size: 50, color: kPrimaryBrown),

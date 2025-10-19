@@ -3,11 +3,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../utils/firestore_helpers.dart';
 import 'package:libra/screens/adminhomepage/manageregpage.dart';
 import 'add_ebooks_page.dart';
-// import 'package:libra/screens/adminhomepage/add_ebooks_page.dart' hide Padding;
 import '../../widgets/dashboardcard.dart';
 import 'add_book_page.dart';
 import 'borrow_request_page.dart';
 import 'overdue_books.dart';
+import 'fines_page.dart';
 
 class DashboardGrid extends StatelessWidget {
   const DashboardGrid({super.key});
@@ -26,10 +26,7 @@ class DashboardGrid extends StatelessWidget {
         children: [
           // ✅ Members card
           StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: FirebaseFirestore.instance
-                .collection('users')
-                //.where('role', isEqualTo: 'student') // optional filter
-                .snapshots(),
+            stream: FirebaseFirestore.instance.collection('users').snapshots(),
             builder: (context, snapshot) {
               String countText = "0";
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -44,9 +41,7 @@ class DashboardGrid extends StatelessWidget {
                 value: countText,
                 title: "MEMBERS",
                 icon: Icons.group,
-                onTap: () {
-                  // Navigate to Members Page
-                },
+                onTap: () {},
               );
             },
           ),
@@ -97,19 +92,16 @@ class DashboardGrid extends StatelessWidget {
                 title: "BORROW REQUESTS",
                 icon: Icons.download_for_offline,
                 onTap: () {
-                  // Navigate to Borrow Requests Page
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const BorrowRequestsPage(),
-                    ),
+                        builder: (_) => const BorrowRequestsPage()),
                   );
                 },
               );
             },
           ),
 
-          // ✅ Overdue Books card
           // ✅ Overdue Books card
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
@@ -146,7 +138,7 @@ class DashboardGrid extends StatelessWidget {
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('registration_requests')
-                .where('status', isEqualTo: 'pending') // only pending
+                .where('status', isEqualTo: 'pending')
                 .snapshots(),
             builder: (context, snapshot) {
               String countText = "0";
@@ -164,21 +156,19 @@ class DashboardGrid extends StatelessWidget {
                 title: "REGISTRATION REQUESTS",
                 icon: Icons.person_add,
                 onTap: () {
-                  // Navigate to the Registration Requests Page
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const ManageRegRequestsPage(),
-                    ),
+                        builder: (_) => const ManageRegRequestsPage()),
                   );
                 },
               );
             },
           ),
 
-          // ✅ Add E-Books card (admin-only)
+          // ✅ Add E-Books card
           DashboardCard(
-            value: '-',
+            value: '+',
             title: "ADD E-BOOKS",
             icon: Icons.cloud_download,
             onTap: () {
@@ -188,6 +178,67 @@ class DashboardGrid extends StatelessWidget {
               );
             },
           ),
+
+          // ✅ Fines card
+          // Inside your GridView children:
+
+          StreamBuilder<QuerySnapshot>(
+  stream: FirebaseFirestore.instance.collection('users').snapshots(),
+  builder: (context, snapshot) {
+    if (!snapshot.hasData) {
+      return DashboardCard(
+        value: '...',
+        title: "FINES",
+        icon: Icons.money_off,
+        onTap: () {},
+      );
+    }
+
+    final users = snapshot.data!.docs;
+
+    final futures = users.map<Future<double>>((userDoc) async {
+      final statsSnap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userDoc.id)
+          .collection('stats')
+          .doc('latest')
+          .get();
+
+      if (statsSnap.exists) {
+        return (statsSnap['fineTotal'] ?? 0.0).toDouble();
+      }
+      return 0.0;
+    }).toList();
+
+    return FutureBuilder<List<double>>(
+      future: Future.wait(futures),
+      builder: (context, finesSnapshot) {
+        if (!finesSnapshot.hasData) {
+          return DashboardCard(
+            value: '...',
+            title: "FINES",
+            icon: Icons.money_off,
+            onTap: () {},
+          );
+        }
+
+        double totalFines = finesSnapshot.data!.fold(0.0, (a, b) => a + b);
+
+        return DashboardCard(
+          value: "₹${totalFines.toStringAsFixed(2)}",
+          title: "FINES",
+          icon: Icons.money_off,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const FinesPage()),
+            );
+          },
+        );
+      },
+    );
+  },
+),
         ],
       ),
     );

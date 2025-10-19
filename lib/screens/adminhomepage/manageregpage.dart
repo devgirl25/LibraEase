@@ -9,7 +9,8 @@ class ManageRegRequestsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Manage Registration Requests'),
+        title: const Text('Manage Registration'),
+        foregroundColor: Colors.white,
         backgroundColor: const Color.fromARGB(255, 87, 36, 14),
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),

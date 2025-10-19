@@ -18,6 +18,7 @@ class BorrowRequestsPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Borrow Requests"),
+        foregroundColor: Colors.white,
         backgroundColor: kPrimaryBrown,
         actions: [
           if (isAdmin(user?.uid))
@@ -42,7 +43,7 @@ class BorrowRequestsPage extends StatelessWidget {
                             right: 0,
                             top: 0,
                             child: Container(
-                              padding: const EdgeInsets.all(4),
+                              padding: const EdgeInsets.all(3),
                               decoration: const BoxDecoration(
                                 color: Colors.red,
                                 shape: BoxShape.circle,
@@ -51,7 +52,7 @@ class BorrowRequestsPage extends StatelessWidget {
                                 '$pendingCount',
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 12,
+                                  fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
