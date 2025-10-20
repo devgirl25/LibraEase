@@ -8,7 +8,8 @@
     "import:scheduled": "node check_and_run.js"
   },
   "dependencies": {
-    "firebase-admin": "^11.0.0",
+    "dotenv": "^17.2.3",
+    "firebase-admin": "^11.11.1",
     "node-fetch": "^2.6.7"
   }
 }

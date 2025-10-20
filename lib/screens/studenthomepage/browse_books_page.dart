@@ -123,10 +123,12 @@ class _BrowseBooksPageState extends State<BrowseBooksPage> {
 
                   // Availability filter
                   bool matchesAvailability = true;
-                  if (_availabilityFilter == 'Available')
+                  if (_availabilityFilter == 'Available') {
                     matchesAvailability = available;
-                  if (_availabilityFilter == 'Unavailable')
+                  }
+                  if (_availabilityFilter == 'Unavailable') {
                     matchesAvailability = !available;
+                  }
 
                   return matchesSearch && matchesAvailability;
                 }).toList();

@@ -1,29 +1,57 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'screens/logins/splash_screen.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'screens/logins/splash_screen.dart';
 import 'services/notification_service.dart';
 import 'dart:async';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'services/push_notification_service.dart';
 
 late FirebaseFirestore db;
-Timer? _notificationTimer;
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+// Background message handler
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  print('Background message received: ${message.messageId}');
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
 
+  // Initialize Firestore
   db = FirebaseFirestore.instance;
 
-  // Start periodic notification checking every hour
-  _notificationTimer = Timer.periodic(const Duration(hours: 1), (timer) {
-    NotificationService().checkAndSendDueDateNotifications();
-  });
+  // Set background message handler
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  Timer? _notificationTimer;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Start periodic notification checking every hour
+    _notificationTimer = Timer.periodic(const Duration(hours: 1), (timer) {
+      NotificationService().checkAndSendDueDateNotifications();
+    });
+
+    // Initialize push notifications with navigatorKey
+    PushNotificationService().init(navigatorKey);
+  }
 
   @override
   void dispose() {
@@ -33,9 +61,10 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const GetMaterialApp(
+    return GetMaterialApp(
+      navigatorKey: navigatorKey, // needed for SnackBars on FCM messages
       debugShowCheckedModeBanner: false,
-      home: SplashScreen(),
+      home: const SplashScreen(),
     );
   }
 }

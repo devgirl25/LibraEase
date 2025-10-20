@@ -3,6 +3,11 @@ import '../utils/firestore_helpers.dart';
 
 class NotificationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  Future<void> init() async {
+    // Start periodic Firestore-based notification checking
+    startPeriodicNotificationCheck();
+    print('NotificationService initialized.');
+  }
 
   /// Send notification to a specific user
   Future<void> sendNotification({
@@ -25,7 +30,8 @@ class NotificationService {
   }
 
   /// Get notifications stream for a user
-  Stream<QuerySnapshot<Map<String, dynamic>>> getNotificationsStream(String userId) {
+  Stream<QuerySnapshot<Map<String, dynamic>>> getNotificationsStream(
+      String userId) {
     return _firestore
         .collection('users')
         .doc(userId)
@@ -49,12 +55,11 @@ class NotificationService {
     try {
       final now = DateTime.now();
       final threeDaysFromNow = now.add(const Duration(days: 3));
-      
+
       // Get all borrow requests that are accepted/borrowed
       final borrowRequestsSnapshot = await _firestore
           .collection('borrow_requests')
-          .where('status', whereIn: ['accepted', 'borrowed'])
-          .get();
+          .where('status', whereIn: ['accepted', 'borrowed']).get();
 
       for (final doc in borrowRequestsSnapshot.docs) {
         final data = doc.data();
@@ -66,7 +71,7 @@ class NotificationService {
 
         // Check if due date is exactly 3 days from now (within a day range)
         final daysDifference = dueDate.difference(now).inDays;
-        
+
         if (daysDifference == 3) {
           // Check if notification already sent for this book and user
           final existingNotification = await _firestore
@@ -74,23 +79,26 @@ class NotificationService {
               .doc(userId)
               .collection('notifications')
               .where('type', isEqualTo: 'due_reminder')
-              .where('message', isEqualTo: 'Your book "$bookTitle" is due in 3 days. Please return it on time to avoid late fees.')
+              .where('message',
+                  isEqualTo:
+                      'Your book "$bookTitle" is due in 3 days. Please return it on time to avoid late fees.')
               .get();
 
           if (existingNotification.docs.isEmpty) {
             await sendNotification(
               userId: userId,
               title: 'Book Due Soon',
-              message: 'Your book "$bookTitle" is due in 3 days. Please return it on time to avoid late fees.',
+              message:
+                  'Your book "$bookTitle" is due in 3 days. Please return it on time to avoid late fees.',
               type: 'due_reminder',
             );
           }
         }
-        
+
         // Also send overdue notifications
         if (daysDifference < 0) {
           final daysOverdue = daysDifference.abs();
-          
+
           // Check if overdue notification already sent today
           final today = DateTime(now.year, now.month, now.day);
           final existingOverdueNotification = await _firestore
@@ -98,14 +106,16 @@ class NotificationService {
               .doc(userId)
               .collection('notifications')
               .where('type', isEqualTo: 'overdue')
-              .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(today))
+              .where('timestamp',
+                  isGreaterThanOrEqualTo: Timestamp.fromDate(today))
               .get();
 
           if (existingOverdueNotification.docs.isEmpty) {
             await sendNotification(
               userId: userId,
               title: 'Book Overdue',
-              message: 'Your book "$bookTitle" is $daysOverdue day${daysOverdue == 1 ? '' : 's'} overdue. Please return it immediately to avoid additional fees.',
+              message:
+                  'Your book "$bookTitle" is $daysOverdue day${daysOverdue == 1 ? '' : 's'} overdue. Please return it immediately to avoid additional fees.',
               type: 'overdue',
             );
           }
@@ -120,7 +130,7 @@ class NotificationService {
   void startPeriodicNotificationCheck() {
     // Check immediately
     checkAndSendDueDateNotifications();
-    
+
     // Note: In a production app, you would use Cloud Functions with scheduled triggers
     // For now, this can be called periodically when the app is active
   }

@@ -13,6 +13,11 @@
 /android/.gradle/
 android/app/build/
 
+# Firebase credentials
+serviceAccountkey.json
+tools/importer/serviceAccountKey.json
+*.secret.json
+*.credentials.json
 
 # VS Code
 .vscode/

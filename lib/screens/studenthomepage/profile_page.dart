@@ -55,9 +55,9 @@ class _ProfilePageState extends State<ProfilePage> {
         final dueDateRaw = data['dueDate'];
 
         DateTime? dueDate;
-        if (dueDateRaw is Timestamp)
+        if (dueDateRaw is Timestamp) {
           dueDate = dueDateRaw.toDate();
-        else if (dueDateRaw is String) dueDate = DateTime.tryParse(dueDateRaw);
+        } else if (dueDateRaw is String) dueDate = DateTime.tryParse(dueDateRaw);
 
         if (status == 'returned') {
           ebooksReadCount++;

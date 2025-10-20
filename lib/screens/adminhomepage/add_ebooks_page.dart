@@ -65,8 +65,9 @@ class _AddEBooksPageState extends State<AddEBooksPage> {
     if (effectiveKey != null) params['key'] = effectiveKey;
     final uri = Uri.https('www.googleapis.com', '/books/v1/volumes', params);
     final res = await http.get(uri);
-    if (res.statusCode != 200)
+    if (res.statusCode != 200) {
       throw Exception('Google Books error ${res.statusCode}');
+    }
     final body = json.decode(res.body) as Map<String, dynamic>;
     final items = (body['items'] as List<dynamic>?) ?? [];
     return items.cast<Map<String, dynamic>>();
@@ -133,7 +134,7 @@ class _AddEBooksPageState extends State<AddEBooksPage> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4.0),
-                    child: Text('Results for "${query}"'),
+                    child: Text('Results for "$query"'),
                   ),
                   const SizedBox(height: 8),
                   Expanded(
@@ -160,14 +161,16 @@ class _AddEBooksPageState extends State<AddEBooksPage> {
                             onPressed: () async {
                               try {
                                 await _addEbookFromItem(it);
-                                if (mounted)
+                                if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(content: Text('Added')));
+                                }
                               } catch (e) {
-                                if (mounted)
+                                if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                           content: Text('Add failed: $e')));
+                                }
                               }
                             },
                             child: const Text('Add'),
@@ -183,9 +186,10 @@ class _AddEBooksPageState extends State<AddEBooksPage> {
         },
       );
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('Search failed: $e')));
+      }
     } finally {
       setState(() => _loading = false);
     }
@@ -204,13 +208,15 @@ class _AddEBooksPageState extends State<AddEBooksPage> {
           attempted++;
         }
       }
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Import finished. Attempted: $attempted')));
+      }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('Import failed: $e')));
+      }
     } finally {
       setState(() => _runningImport = false);
     }
@@ -225,11 +231,12 @@ class _AddEBooksPageState extends State<AddEBooksPage> {
       'enabledBy': 'admin',
     });
     if (mounted) setState(() => _monthlyEnabled = enable);
-    if (mounted)
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(enable
               ? 'Monthly schedule enabled'
               : 'Monthly schedule disabled')));
+    }
   }
 
   @override
@@ -257,7 +264,7 @@ class _AddEBooksPageState extends State<AddEBooksPage> {
                 onPressed:
                     _loading ? null : () => _searchAndShow(_qCtrl.text.trim()),
                 child: _loading
-                    ? SizedBox(
+                    ? const SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
