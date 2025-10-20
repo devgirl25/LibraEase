@@ -8,7 +8,7 @@ import 'registrations_page.dart';
 import 'Wishlist_page.dart';
 import 'Profile_page.dart';
 import '../logins/login_page_student.dart';
-import 'notifications_page.dart';
+import 'browse_books_page.dart';
 
 // --- CONSTANT COLORS ---
 const Color kPrimaryBrown = Color.fromARGB(255, 87, 36, 14);
@@ -69,7 +69,7 @@ class _HomePageState extends State<HomePage>
     Widget? nextPage;
     switch (index) {
       case 1:
-        nextPage = const NotificationsPage();
+        nextPage = const BrowseBooksPage();
         break;
       case 2:
         nextPage = const WishlistPage();
@@ -248,7 +248,7 @@ class _HomePageState extends State<HomePage>
 
   Widget _buildBottomNavBar() {
     return Container(
-      // The padding is now on the outside of the `Container` for the box shadow
+      // The padding is now on the outside of the Container for the box shadow
       decoration: BoxDecoration(
         boxShadow: [
           BoxShadow(
@@ -270,7 +270,7 @@ class _HomePageState extends State<HomePage>
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _buildNavItem(Icons.home, 0),
-            _buildNavItem(Icons.notifications, 1),
+            _buildNavItem(Icons.auto_stories_outlined, 1),
             _buildNavItem(Icons.bookmark, 2),
             _buildNavItem(Icons.account_circle, 3),
           ],
