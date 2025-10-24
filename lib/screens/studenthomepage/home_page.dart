@@ -8,7 +8,6 @@ import 'registrations_page.dart';
 import 'Wishlist_page.dart';
 import 'Profile_page.dart';
 import '../logins/login_page_student.dart';
-import 'browse_books_page.dart';
 
 // --- CONSTANT COLORS ---
 const Color kPrimaryBrown = Color.fromARGB(255, 87, 36, 14);
