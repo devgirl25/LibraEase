@@ -16,6 +16,7 @@ class _LoginStudentScreenState extends State<LoginStudentScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -266,7 +267,7 @@ class _LoginStudentScreenState extends State<LoginStudentScreen> {
                     // Password field
                     TextFormField(
                       controller: passwordController,
-                      obscureText: true,
+                      obscureText: _obscurePassword,
                       decoration: InputDecoration(
                         hintText: 'Password',
                         prefixIcon: const Icon(Icons.lock),
@@ -274,6 +275,19 @@ class _LoginStudentScreenState extends State<LoginStudentScreen> {
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(15),
+                        ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword =
+                                  !_obscurePassword; // toggle visibility
+                            });
+                          },
                         ),
                       ),
                       validator: (value) => value == null || value.isEmpty
