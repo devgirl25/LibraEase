@@ -17,6 +17,7 @@ class _LoginAdminScreenState extends State<LoginAdminScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _obscurePasswordAdmin = true;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -253,7 +254,7 @@ class _LoginAdminScreenState extends State<LoginAdminScreen> {
                     // Password field
                     TextFormField(
                       controller: passwordController,
-                      obscureText: true,
+                      obscureText: _obscurePasswordAdmin,
                       decoration: InputDecoration(
                         hintText: 'Password',
                         prefixIcon: const Icon(Icons.lock),
@@ -261,6 +262,18 @@ class _LoginAdminScreenState extends State<LoginAdminScreen> {
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(15),
+                        ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePasswordAdmin
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePasswordAdmin = !_obscurePasswordAdmin;
+                            });
+                          },
                         ),
                       ),
                       validator: (value) {

@@ -1,4 +1,4 @@
-name: libra
+name: libraease
 description: "A new Flutter project."
 publish_to: 'none'
 
@@ -25,6 +25,7 @@ dependencies:
   # Image Picker (pick images from gallery or camera)
   image_picker: ^1.2.0
   firebase_messaging: 16.0.3
+  flutter_launcher_icons: ^0.14.4
 
 
 dev_dependencies:
@@ -40,6 +41,7 @@ flutter:
     - assets/images/splash_screen/library_icon.png
     - assets/images/select_user_type/student.png
     - assets/images/forgot_password/library.png
+    - assets/icons/app_icon.png
 
 
   fonts:
@@ -48,3 +50,8 @@ flutter:
         - asset: assets/fonts/InknutAntiqua-Regular.ttf
         - asset: assets/fonts/InknutAntiqua-Bold.ttf
           weight: 700
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icons/app_icon.png"
+  background_color: "#2E1C0D"

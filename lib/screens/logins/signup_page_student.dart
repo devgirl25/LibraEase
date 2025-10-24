@@ -20,6 +20,8 @@ class _SignupStudentScreenState extends State<SignupStudentScreen> {
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController =
       TextEditingController();
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
@@ -225,23 +227,60 @@ class _SignupStudentScreenState extends State<SignupStudentScreen> {
                         validator: (v) =>
                             v == null || v.isEmpty ? 'Enter Student ID' : null),
                     const SizedBox(height: 20),
-                    _inputField(
-                        controller: passwordController,
-                        hint: 'Password (min 6 characters)',
-                        icon: Icons.lock,
-                        obscure: true,
-                        validator: (v) => v == null || v.length < 6
-                            ? 'Password must be 6+ characters'
-                            : null),
+                    TextFormField(
+                      controller: passwordController,
+                      obscureText: _obscurePassword,
+                      decoration: InputDecoration(
+                        hintText: 'Password (min 6 characters)',
+                        prefixIcon: const Icon(Icons.lock),
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        suffixIcon: IconButton(
+                          icon: Icon(_obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                        ),
+                      ),
+                      validator: (v) => v == null || v.length < 6
+                          ? 'Password must be 6+ characters'
+                          : null,
+                    ),
                     const SizedBox(height: 20),
-                    _inputField(
-                        controller: confirmPasswordController,
-                        hint: 'Confirm Password',
-                        icon: Icons.lock_outline,
-                        obscure: true,
-                        validator: (v) => v == null || v.isEmpty
-                            ? 'Confirm your password'
-                            : null),
+                    TextFormField(
+                      controller: confirmPasswordController,
+                      obscureText: _obscureConfirmPassword,
+                      decoration: InputDecoration(
+                        hintText: 'Confirm Password',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        suffixIcon: IconButton(
+                          icon: Icon(_obscureConfirmPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility),
+                          onPressed: () {
+                            setState(() {
+                              _obscureConfirmPassword =
+                                  !_obscureConfirmPassword;
+                            });
+                          },
+                        ),
+                      ),
+                      validator: (v) => v == null || v.isEmpty
+                          ? 'Confirm your password'
+                          : null,
+                    ),
                     const SizedBox(height: 30),
 
                     // Sign Up Button
