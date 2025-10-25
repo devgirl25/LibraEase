@@ -7,6 +7,7 @@ import 'services/notification_service.dart';
 import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'services/push_notification_service.dart';
+import 'screens/studenthomepage/home_page.dart';
 
 late FirebaseFirestore db;
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -65,6 +66,7 @@ class _MyAppState extends State<MyApp> {
       navigatorKey: navigatorKey, // needed for SnackBars on FCM messages
       debugShowCheckedModeBanner: false,
       home: const SplashScreen(),
+      //home: HomePage(),
     );
   }
 }
