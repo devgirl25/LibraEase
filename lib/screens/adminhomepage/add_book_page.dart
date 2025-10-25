@@ -18,14 +18,12 @@ class _AddBookPageState extends State<AddBookPage> {
   final TextEditingController authorController = TextEditingController();
   final TextEditingController isbnController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
-  final TextEditingController copiesController =
-      TextEditingController(); // 🆕 Added
+  final TextEditingController copiesController = TextEditingController();
 
   File? _selectedImage;
   bool _isUploading = false;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// 📷 Pick image from camera or gallery
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: source, imageQuality: 85);
@@ -34,7 +32,6 @@ class _AddBookPageState extends State<AddBookPage> {
     }
   }
 
-  /// ☁️ Upload image to Cloudinary and save book in Firestore
   Future<void> _uploadBookWithImage() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedImage == null) {
@@ -58,8 +55,8 @@ class _AddBookPageState extends State<AddBookPage> {
         'title': titleController.text.trim(),
         'author': authorController.text.trim(),
         'isbn': isbnController.text.trim(),
-        'description': descriptionController.text.trim(),
-        'no_of_copies': int.parse(copiesController.text.trim()), // 🆕 Added
+        'description': descriptionController.text.trim(), // ✅ added
+        'no_of_copies': int.parse(copiesController.text.trim()),
         'imageUrl': imageUrl,
         'addedAt': FieldValue.serverTimestamp(),
       });
@@ -72,12 +69,11 @@ class _AddBookPageState extends State<AddBookPage> {
         _selectedImage = null;
       });
 
-      // Clear all input fields
       titleController.clear();
       authorController.clear();
       isbnController.clear();
-      descriptionController.clear();
-      copiesController.clear(); // 🆕 Clear new field
+      descriptionController.clear(); // ✅ clear description
+      copiesController.clear();
     } catch (e) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -157,7 +153,7 @@ class _AddBookPageState extends State<AddBookPage> {
 
                 const SizedBox(height: 12),
 
-                // 🆕 Number of Copies
+                // Number of Copies
                 TextFormField(
                   controller: copiesController,
                   decoration: const InputDecoration(
@@ -176,10 +172,23 @@ class _AddBookPageState extends State<AddBookPage> {
                     return null;
                   },
                 ),
+                const SizedBox(height: 12),
 
+                // Description
+                TextFormField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Book Description',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 4,
+                  validator: (value) => value == null || value.isEmpty
+                      ? 'Enter description'
+                      : null,
+                ),
                 const SizedBox(height: 20),
 
-                /// 📷 Image Section
+                // Image Section
                 if (_selectedImage != null) ...[
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
@@ -224,7 +233,6 @@ class _AddBookPageState extends State<AddBookPage> {
                     ],
                   ),
                 ],
-
                 const SizedBox(height: 20),
 
                 _isUploading
