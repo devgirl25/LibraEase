@@ -12,7 +12,7 @@ class BookDetailPage extends StatefulWidget {
   final String description;
   final String imageUrl;
   final String category;
-  final bool available;
+  final int noOfCopies;
 
   const BookDetailPage({
     super.key,
@@ -22,7 +22,7 @@ class BookDetailPage extends StatefulWidget {
     required this.description,
     required this.imageUrl,
     required this.category,
-    required this.available,
+    required this.noOfCopies,
   });
 
   @override
@@ -35,12 +35,16 @@ class _BookDetailPageState extends State<BookDetailPage> {
 
   bool isInWishlist = false;
   bool isBorrowing = false;
+  late int currentCopies; // track real-time copies
 
   @override
   void initState() {
     super.initState();
+    currentCopies = widget.noOfCopies;
     _checkWishlistStatus();
   }
+
+  bool get isAvailable => currentCopies > 0;
 
   Future<void> _checkWishlistStatus() async {
     final user = _auth.currentUser;
@@ -92,6 +96,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
     setState(() => isInWishlist = !isInWishlist);
   }
 
+  /// 🟢 Borrow Request & Update Copies
   Future<void> _sendBorrowRequest() async {
     final user = _auth.currentUser;
     if (user == null) {
@@ -101,7 +106,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
       return;
     }
 
-    if (!widget.available) {
+    if (!isAvailable) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('This book is not available right now')),
       );
@@ -114,13 +119,13 @@ class _BookDetailPageState extends State<BookDetailPage> {
       final now = DateTime.now();
       final dueDate = now.add(const Duration(days: 14));
 
+      // 🔹 Only create the borrow request
       await _firestore.collection('borrow_requests').add({
         'bookId': widget.bookId,
         'bookTitle': widget.title,
         'userId': user.uid,
-        'status': 'pending',
+        'status': 'pending', // admin will later approve
         'requestedAt': FieldValue.serverTimestamp(),
-        // Store dueDate as a Firestore Timestamp for consistency
         'dueDate': Timestamp.fromDate(dueDate),
       });
 
@@ -164,8 +169,11 @@ class _BookDetailPageState extends State<BookDetailPage> {
                             height: 250,
                             width: 180,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(Icons.book,
-                                size: 150, color: kPrimaryBrown),
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.book,
+                              size: 150,
+                              color: kPrimaryBrown,
+                            ),
                           )
                         : const Icon(
                             Icons.book,
@@ -175,7 +183,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
                   ),
                   const SizedBox(width: 12),
 
-                  // Heart icon
+                  // Wishlist heart icon
                   GestureDetector(
                     onTap: _toggleWishlist,
                     child: AnimatedSwitcher(
@@ -204,10 +212,9 @@ class _BookDetailPageState extends State<BookDetailPage> {
             Text(
               widget.title,
               style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: kPrimaryBrown,
-              ),
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: kPrimaryBrown),
             ),
             const SizedBox(height: 8),
             Text(
@@ -228,13 +235,24 @@ class _BookDetailPageState extends State<BookDetailPage> {
             const SizedBox(height: 12),
             Row(
               children: [
+                const Icon(Icons.library_books, color: kPrimaryBrown),
+                const SizedBox(width: 8),
+                Text(
+                  'Copies Available: $currentCopies',
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
                 const Icon(Icons.info, color: kPrimaryBrown),
                 const SizedBox(width: 8),
                 Text(
-                  widget.available ? 'Available' : 'Not Available',
+                  isAvailable ? 'Available' : 'Not Available',
                   style: TextStyle(
                     fontSize: 16,
-                    color: widget.available ? Colors.green : Colors.red,
+                    color: isAvailable ? Colors.green : Colors.red,
                     fontWeight: FontWeight.bold,
                   ),
                 ),

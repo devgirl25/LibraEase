@@ -27,7 +27,7 @@ dependencies:
   image_picker: ^1.2.0
   firebase_messaging: 16.0.3
   flutter_launcher_icons: ^0.14.4
-
+  # google_fonts: ^6.0.0
 
 dev_dependencies:
   flutter_test:
@@ -55,4 +55,4 @@ flutter_launcher_icons:
   android: true
   ios: false
   image_path: "assets/icons/app_icon.png"
-  background_color: "#2E1C0D"
+  background_color: "#3B2715"

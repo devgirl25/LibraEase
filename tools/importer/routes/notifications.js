@@ -20,14 +20,16 @@ const log = (...args) => {
 };
 
 // ----------- Firebase Admin init -----------
-if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-  log('❌ GOOGLE_APPLICATION_CREDENTIALS env var not set. Exiting.');
+// Use relative path to your serviceAccountKey.json
+const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
+if (!fs.existsSync(serviceAccountPath)) {
+  log(`❌ serviceAccountKey.json not found at ${serviceAccountPath}. Exiting.`);
   process.exit(1);
 }
 
 if (!admin.apps.length) {
   admin.initializeApp({
-    credential: admin.credential.cert(require(process.env.GOOGLE_APPLICATION_CREDENTIALS)),
+    credential: admin.credential.cert(require(serviceAccountPath)),
   });
   log('✅ Firebase Admin initialized.');
 }
@@ -70,7 +72,7 @@ async function sendDueDateNotifications() {
       if (diffDays < 0) {
         notifications.push({
           uid: data.userId,
-          message: `Your borrowed book "${data.bookTitle}" is overdue by ${Math.abs(diffDays)} day(s). Please return it immediately.`,
+          message: `Your borrowed book "${data.bookTitle}" is overdue by ${Math.abs(diffDays)} day(s). Please return it on time to avoid late fees.`,
         });
       }
     });
@@ -87,15 +89,22 @@ async function sendDueDateNotifications() {
         continue;
       }
 
-      await messaging.send({
-        token: fcmToken,
-        notification: {
-          title: 'LibraEase Reminder',
-          body: n.message,
-        },
-        android: { priority: 'high' },
-        apns: { headers: { 'apns-priority': '10' } },
-      });
+    await messaging.send({
+  token: fcmToken,
+  notification: {
+    title: 'LibraEase Reminder',
+    body: n.message,
+  },
+  android: {
+    priority: 'high',
+    notification: {
+      icon: 'ic_launcher',  // optional: your drawable icon in Android
+      color: '#3B2715',     // optional: icon color
+    },
+  },
+  apns: { headers: { 'apns-priority': '10' } },
+});
+
 
       log(`✅ Notification sent to user: ${n.uid}`);
     }
