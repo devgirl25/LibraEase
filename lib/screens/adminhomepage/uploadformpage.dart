@@ -9,9 +9,10 @@ class UploadFormPage extends StatefulWidget {
 }
 
 class _UploadFormPageState extends State<UploadFormPage> {
-  final _formController = TextEditingController();
+  final TextEditingController _formController = TextEditingController();
   final _formDocRef =
       FirebaseFirestore.instance.collection('settings').doc('registrationForm');
+  bool _isSaving = false; // show loading when saving
 
   @override
   void initState() {
@@ -19,20 +20,45 @@ class _UploadFormPageState extends State<UploadFormPage> {
     _loadExistingLink();
   }
 
+  // Load existing link if any
   Future<void> _loadExistingLink() async {
-    final doc = await _formDocRef.get();
-    if (doc.exists && doc.data()!.containsKey('link')) {
-      _formController.text = doc['link'];
+    try {
+      final doc = await _formDocRef.get();
+      if (doc.exists && doc.data()!.containsKey('link')) {
+        _formController.text = doc['link'];
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading link: $e')),
+      );
     }
   }
 
+  // Save the link to Firestore
   Future<void> _saveLink() async {
     final link = _formController.text.trim();
-    if (link.isEmpty) return;
+    if (link.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a link')),
+      );
+      return;
+    }
 
-    await _formDocRef.set({'link': link});
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Google Form link saved')));
+    setState(() => _isSaving = true);
+
+    try {
+      // Set the link in Firestore
+      await _formDocRef.set({'link': link});
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Google Form link saved successfully')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error saving link: $e')),
+      );
+    } finally {
+      setState(() => _isSaving = false);
+    }
   }
 
   @override
@@ -75,17 +101,26 @@ class _UploadFormPageState extends State<UploadFormPage> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _saveLink,
+                    onPressed: _isSaving ? null : _saveLink,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green[700],
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text(
-                      'Save Link',
-                      style: TextStyle(fontSize: 16, color: Colors.white),
-                    ),
+                    child: _isSaving
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            'Save Link',
+                            style: TextStyle(fontSize: 16, color: Colors.white),
+                          ),
                   ),
                 ),
               ],
