@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'book_page.dart'; // ✅ Make sure this import path is correct
+import 'book_page.dart'; // Make sure this import path is correct
 
 // --- CONSTANT COLORS ---
 const Color kPrimaryBrown = Color.fromARGB(255, 87, 36, 14);
@@ -43,7 +43,7 @@ class _BrowseBooksPageState extends State<BrowseBooksPage> {
       ),
       body: Column(
         children: [
-          // ----------------- Search Bar -----------------
+          // Search Bar
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: TextField(
@@ -54,7 +54,7 @@ class _BrowseBooksPageState extends State<BrowseBooksPage> {
                 });
               },
               decoration: InputDecoration(
-                hintText: 'Search Book by title ',
+                hintText: 'Search Book by title',
                 prefixIcon: const Icon(Icons.search, color: kPrimaryBrown),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -66,7 +66,7 @@ class _BrowseBooksPageState extends State<BrowseBooksPage> {
             ),
           ),
 
-          // ----------------- Availability Filter -----------------
+          // Availability Filter
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: Row(
@@ -92,14 +92,15 @@ class _BrowseBooksPageState extends State<BrowseBooksPage> {
             ),
           ),
 
-          // ----------------- Book List -----------------
+          // Book List
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: _firestore.collection('books').snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
-                      child: CircularProgressIndicator(color: kPrimaryBrown));
+                    child: CircularProgressIndicator(color: kPrimaryBrown),
+                  );
                 }
 
                 if (snapshot.hasError) {
@@ -115,19 +116,19 @@ class _BrowseBooksPageState extends State<BrowseBooksPage> {
                   final title = (data['title'] ?? '').toString().toLowerCase();
                   final author =
                       (data['author'] ?? '').toString().toLowerCase();
-                  final available = (data['available'] ?? true) as bool;
+                  final noOfCopies = (data['no_of_copies'] ?? 0) as int;
 
                   // Search filter
                   final matchesSearch = title.contains(_searchQuery) ||
                       author.contains(_searchQuery);
 
-                  // Availability filter
+                  // Availability filter based on noOfCopies
                   bool matchesAvailability = true;
                   if (_availabilityFilter == 'Available') {
-                    matchesAvailability = available;
+                    matchesAvailability = noOfCopies > 0;
                   }
                   if (_availabilityFilter == 'Unavailable') {
-                    matchesAvailability = !available;
+                    matchesAvailability = noOfCopies <= 0;
                   }
 
                   return matchesSearch && matchesAvailability;
@@ -142,6 +143,8 @@ class _BrowseBooksPageState extends State<BrowseBooksPage> {
                   itemCount: books.length,
                   itemBuilder: (context, index) {
                     final data = books[index].data() as Map<String, dynamic>;
+                    final noOfCopies = (data['no_of_copies'] ?? 0) as int;
+
                     return BookListItem(
                       bookId: books[index].id,
                       title: data['title'] ?? 'Untitled',
@@ -150,7 +153,7 @@ class _BrowseBooksPageState extends State<BrowseBooksPage> {
                           data['description'] ?? 'No description available.',
                       imageUrl: data['imageUrl'] ?? '',
                       category: data['category'] ?? 'General',
-                      available: data['available'] ?? true,
+                      noOfCopies: noOfCopies,
                     );
                   },
                 );
@@ -170,7 +173,7 @@ class BookListItem extends StatelessWidget {
   final String description;
   final String imageUrl;
   final String category;
-  final bool available;
+  final int noOfCopies; // <-- use this instead of bool available
 
   const BookListItem({
     super.key,
@@ -180,7 +183,7 @@ class BookListItem extends StatelessWidget {
     required this.description,
     required this.imageUrl,
     required this.category,
-    required this.available,
+    required this.noOfCopies,
   });
 
   @override
@@ -211,8 +214,8 @@ class BookListItem extends StatelessWidget {
         ),
         subtitle: Text(author),
         trailing: Icon(
-          available ? Icons.check_circle : Icons.cancel,
-          color: available ? Colors.green : Colors.red,
+          noOfCopies > 0 ? Icons.check_circle : Icons.cancel,
+          color: noOfCopies > 0 ? Colors.green : Colors.red,
         ),
         onTap: () {
           Navigator.push(
@@ -225,7 +228,7 @@ class BookListItem extends StatelessWidget {
                 description: description,
                 imageUrl: imageUrl,
                 category: category,
-                available: available,
+                noOfCopies: noOfCopies, // pass actual copies
               ),
             ),
           );

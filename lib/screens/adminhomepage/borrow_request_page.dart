@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../logins/constants.dart';
 import 'managerequest.dart';
 
@@ -8,76 +9,63 @@ class BorrowRequestsPage extends StatelessWidget {
   const BorrowRequestsPage({super.key});
 
   bool isAdmin(String? uid) {
-    return uid == "ZZZA4GmfBlV6ZlYuL4Y84vVuui42";
+    return uid == "ZZZA4GmfBlV6ZlYuL4Y84vVuui42"; // admin UID
+  }
+
+  Future<String> _getUserName(String userId) async {
+    final doc =
+        await FirebaseFirestore.instance.collection('users').doc(userId).get();
+    if (doc.exists) {
+      return doc.data()?['name'] ?? userId;
+    }
+    return userId;
+  }
+
+  Future<String?> _getBookImage(String bookId) async {
+    final doc =
+        await FirebaseFirestore.instance.collection('books').doc(bookId).get();
+    if (doc.exists) {
+      return doc.data()?['imageUrl'];
+    }
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Borrow Requests"),
-        foregroundColor: Colors.white,
-        backgroundColor: kPrimaryBrown,
-        actions: [
-          if (isAdmin(user?.uid))
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('borrow_requests')
-                  .where('status', isEqualTo: 'pending')
-                  .snapshots(),
-              builder: (context, snapshot) {
-                int pendingCount = 0;
-                if (snapshot.hasData) pendingCount = snapshot.data!.docs.length;
-
-                return Padding(
-                  padding: const EdgeInsets.only(right: 16.0),
-                  child: Center(
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        const Icon(Icons.notifications),
-                        if (pendingCount > 0)
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(3),
-                              decoration: const BoxDecoration(
-                                color: Colors.red,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Text(
-                                '$pendingCount',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-        ],
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
+    final borrowStream = isAdmin(user?.uid)
+        ? FirebaseFirestore.instance
             .collection('borrow_requests')
             .orderBy('requestedAt', descending: true)
-            .snapshots(),
+            .snapshots()
+        : FirebaseFirestore.instance
+            .collection('borrow_requests')
+            .where('userId', isEqualTo: user?.uid)
+            .orderBy('requestedAt', descending: true)
+            .snapshots();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Borrow Requests",
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+        foregroundColor: Colors.white,
+        backgroundColor: kPrimaryBrown,
+      ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: borrowStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text("No borrow requests"));
+            return const Center(
+              child: Text(
+                "No borrow requests",
+                style: TextStyle(fontSize: 16),
+              ),
+            );
           }
 
           final docs = snapshot.data!.docs;
@@ -88,39 +76,76 @@ class BorrowRequestsPage extends StatelessWidget {
               final requestId = docs[index].id;
               final status = data['status'] ?? 'pending';
               final isRequestAdmin = isAdmin(user?.uid);
+              final userId = data['userId'] ?? '';
+              final bookId = data['bookId'] ?? '';
 
-              return Card(
-                margin: const EdgeInsets.all(12),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                child: ListTile(
-                  title: Text(data['bookTitle'] ?? 'Unknown Book'),
-                  subtitle: Text(
-                    "Requested by: ${data['userId']}\nStatus: $status",
-                    style: TextStyle(
-                        color: status == "accepted"
-                            ? Colors.green
-                            : status == "rejected"
-                                ? Colors.red
-                                : Colors.orange),
-                  ),
-                  trailing: isRequestAdmin
-                      ? TextButton(
-                          child: const Text("Manage"),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ManageRequestPage(
-                                  requestId: requestId,
-                                  requestData: data,
-                                ),
+              return FutureBuilder<List<dynamic>>(
+                future:
+                    Future.wait([_getUserName(userId), _getBookImage(bookId)]),
+                builder: (context, snapshot) {
+                  final userName = snapshot.data?[0] ?? userId;
+                  final bookImage = snapshot.data?[1];
+
+                  return Card(
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15)),
+                    elevation: 3,
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.all(12),
+                      leading: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: bookImage != null
+                            ? Image.network(
+                                bookImage,
+                                width: 60,
+                                height: 80,
+                                fit: BoxFit.cover,
+                              )
+                            : const Icon(Icons.book,
+                                size: 60, color: kPrimaryBrown),
+                      ),
+                      title: Text(
+                        data['bookTitle'] ?? 'Unknown Book',
+                        style: GoogleFonts.poppins(
+                            fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: Text(
+                        "Requested by: $userName\nStatus: $status",
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: status == "accepted"
+                              ? Colors.green
+                              : status == "rejected"
+                                  ? Colors.red
+                                  : Colors.orange,
+                        ),
+                      ),
+                      trailing: isRequestAdmin
+                          ? TextButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ManageRequestPage(
+                                      requestId: requestId,
+                                      requestData: data,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Text(
+                                "Manage",
+                                style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                    color: kPrimaryBrown),
                               ),
-                            );
-                          },
-                        )
-                      : null,
-                ),
+                            )
+                          : null,
+                    ),
+                  );
+                },
               );
             },
           );

@@ -18,6 +18,8 @@ class _AddBookPageState extends State<AddBookPage> {
   final TextEditingController authorController = TextEditingController();
   final TextEditingController isbnController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
+  final TextEditingController copiesController =
+      TextEditingController(); // 🆕 Added
 
   File? _selectedImage;
   bool _isUploading = false;
@@ -57,6 +59,7 @@ class _AddBookPageState extends State<AddBookPage> {
         'author': authorController.text.trim(),
         'isbn': isbnController.text.trim(),
         'description': descriptionController.text.trim(),
+        'no_of_copies': int.parse(copiesController.text.trim()), // 🆕 Added
         'imageUrl': imageUrl,
         'addedAt': FieldValue.serverTimestamp(),
       });
@@ -69,10 +72,12 @@ class _AddBookPageState extends State<AddBookPage> {
         _selectedImage = null;
       });
 
+      // Clear all input fields
       titleController.clear();
       authorController.clear();
       isbnController.clear();
       descriptionController.clear();
+      copiesController.clear(); // 🆕 Clear new field
     } catch (e) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -148,6 +153,28 @@ class _AddBookPageState extends State<AddBookPage> {
                       }
                     },
                   ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // 🆕 Number of Copies
+                TextFormField(
+                  controller: copiesController,
+                  decoration: const InputDecoration(
+                    labelText: 'Number of Copies',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Enter number of copies';
+                    }
+                    final number = int.tryParse(value);
+                    if (number == null || number < 1) {
+                      return 'Enter a valid number';
+                    }
+                    return null;
+                  },
                 ),
 
                 const SizedBox(height: 20),

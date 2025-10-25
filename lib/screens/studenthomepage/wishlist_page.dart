@@ -69,9 +69,12 @@ class WishlistPage extends StatelessWidget {
             itemCount: docs.length,
             itemBuilder: (context, index) {
               final data = docs[index].data();
+              final bookId = data['bookId'] as String;
+              final title = data['title'] as String? ?? 'Untitled';
+
               return WishlistItem(
-                bookId: data['bookId'],
-                title: data['title'],
+                bookId: bookId,
+                title: title,
                 userId: user.uid,
               );
             },
@@ -104,51 +107,102 @@ class WishlistItem extends StatelessWidget {
     await wishlistRef.delete();
   }
 
+  Future<DocumentSnapshot<Map<String, dynamic>>> _getBookData() async {
+    return await FirebaseFirestore.instance.collection('books').doc(bookId).get();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
-      child: GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => BookDetailPage(
-                bookId: bookId,
-                title: title,
-                author: '',
-                description: '',
-                imageUrl: '',
-                category: '',
-                available: true,
+      child: FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+        future: _getBookData(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEAE3DC),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) {
+            return Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEAE3DC),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: kPrimaryBrown),
+                    ),
+                  ),
+                  const Icon(Icons.error, color: Colors.red),
+                ],
+              ),
+            );
+          }
+
+          final bookData = snapshot.data!.data()!;
+          final author = bookData['author'] ?? '';
+          final description = bookData['description'] ?? '';
+          final imageUrl = bookData['imageUrl'] ?? '';
+          final category = bookData['category'] ?? '';
+          final noOfCopies = bookData['no_of_copies'] ?? 0;
+
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BookDetailPage(
+                    bookId: bookId,
+                    title: title,
+                    author: author,
+                    description: description,
+                    imageUrl: imageUrl,
+                    category: category,
+                    noOfCopies: noOfCopies,
+                  ),
+                ),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEAE3DC),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: kPrimaryBrown),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: _removeFromWishlist,
+                    child: const Icon(Icons.favorite, color: Colors.red),
+                  ),
+                ],
               ),
             ),
           );
         },
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: const Color(0xFFEAE3DC),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: kPrimaryBrown),
-                ),
-              ),
-              GestureDetector(
-                onTap: _removeFromWishlist,
-                child: const Icon(Icons.favorite, color: Colors.red),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
