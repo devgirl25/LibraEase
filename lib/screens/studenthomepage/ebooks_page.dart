@@ -22,7 +22,7 @@ class _EBooksPageState extends State<EBooksPage> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
+   // final screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
       backgroundColor: kScaffoldBackground,
