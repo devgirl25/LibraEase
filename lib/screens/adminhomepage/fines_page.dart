@@ -83,18 +83,14 @@ class _FinesPageState extends State<FinesPage> {
                                 Text('Email: $email'),
                                 Text('Student ID: $studentId'),
                                 const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    Chip(
-                                      label: Text('Overdue: $overdue'),
-                                      backgroundColor: Colors.red[100],
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Chip(
-                                      label: Text('Total Fines: ₹$fineTotal'),
-                                      backgroundColor: Colors.orange[100],
-                                    ),
-                                  ],
+                                Chip(
+                                  label: Text('Overdue: $overdue'),
+                                  backgroundColor: Colors.red[100],
+                                ),
+                                const SizedBox(height: 8),
+                                Chip(
+                                  label: Text('Total Fines: ₹$fineTotal'),
+                                  backgroundColor: Colors.orange[100],
                                 ),
                               ],
                             ),

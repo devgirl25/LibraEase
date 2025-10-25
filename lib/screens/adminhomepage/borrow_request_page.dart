@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../logins/constants.dart';
 import 'managerequest.dart';
 
@@ -47,8 +46,10 @@ class BorrowRequestsPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("Borrow Requests",
-            style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+        title: const Text(
+          "Borrow Requests",
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
         foregroundColor: Colors.white,
         backgroundColor: kPrimaryBrown,
       ),
@@ -108,12 +109,12 @@ class BorrowRequestsPage extends StatelessWidget {
                       ),
                       title: Text(
                         data['bookTitle'] ?? 'Unknown Book',
-                        style: GoogleFonts.poppins(
+                        style: const TextStyle(
                             fontSize: 16, fontWeight: FontWeight.w600),
                       ),
                       subtitle: Text(
                         "Requested by: $userName\nStatus: $status",
-                        style: GoogleFonts.poppins(
+                        style: TextStyle(
                           fontSize: 14,
                           color: status == "accepted"
                               ? Colors.green
@@ -135,9 +136,9 @@ class BorrowRequestsPage extends StatelessWidget {
                                   ),
                                 );
                               },
-                              child: Text(
+                              child: const Text(
                                 "Manage",
-                                style: GoogleFonts.poppins(
+                                style: TextStyle(
                                     fontWeight: FontWeight.w600,
                                     color: kPrimaryBrown),
                               ),

@@ -28,7 +28,7 @@ class _LoginStudentScreenState extends State<LoginStudentScreen> {
   // 🌟 Custom Styled SnackBar
   void showCustomSnackBar(BuildContext context, String message,
       {bool isError = false}) {
-    final color = isError ? const Color(0xFFB71C1C) : const Color(0xFF255A5A);
+    //final color = isError ? const Color(0xFFB71C1C) : const Color(0xFF255A5A);
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
