@@ -70,7 +70,7 @@ async function sendDueDateNotifications() {
       if (diffDays < 0) {
         notifications.push({
           uid: data.userId,
-          message: `Your borrowed book "${data.bookTitle}" is overdue by ${Math.abs(diffDays)} day(s). Please return it immediately.`,
+          message: `Your borrowed book "${data.bookTitle}" is overdue by ${Math.abs(diffDays)} day(s). Please return it on time to avoid late fees.`,
         });
       }
     });
@@ -90,6 +90,8 @@ async function sendDueDateNotifications() {
       await messaging.send({
         token: fcmToken,
         notification: {
+       icon: 'ic_launcher', 
+      color: '#3B2715', 
           title: 'LibraEase Reminder',
           body: n.message,
         },
