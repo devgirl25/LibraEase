@@ -714,8 +714,8 @@ class _HomePageState extends State<HomePage>
         children: [
           // Background image with blur
           Positioned.fill(
-            child: Image.network(
-              'https://elevatex.de/wp-content/uploads/2019/02/blur-book-stack-books-590493.jpg',
+            child: Image.asset(
+              'assets/images/homepage_bg.jpg',
               fit: BoxFit.cover,
             ),
           ),

@@ -43,6 +43,7 @@ flutter:
     - assets/images/select_user_type/student.png
     - assets/images/forgot_password/library.png
     - assets/icons/app_icon.png
+    - assets/images/home_bkgd.jpg
 
 
   fonts:
