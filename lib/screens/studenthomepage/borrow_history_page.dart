@@ -92,7 +92,8 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-                child: CircularProgressIndicator(color: kPrimaryBrown));
+              child: CircularProgressIndicator(color: kPrimaryBrown),
+            );
           }
 
           if (snapshot.hasError) {
@@ -133,11 +134,14 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(record.title,
-                style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: kPrimaryBrown)),
+            Text(
+              record.title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: kPrimaryBrown,
+              ),
+            ),
             const SizedBox(height: 6),
             Text(
               'Status: ${record.status.name}',
@@ -147,6 +151,7 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
                     isReturned ? Colors.green : kPrimaryBrown.withOpacity(0.7),
               ),
             ),
+
             if (record.dueDate != null && !isReturned) ...[
               Text(
                 'Due Date: ${DateFormat('dd MMM yyyy').format(record.dueDate!)}',
@@ -156,8 +161,6 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-
-              // 🧩 Calculate remaining days and show message
               Builder(
                 builder: (context) {
                   final now = DateTime.now();
@@ -182,9 +185,85 @@ class _BorrowHistoryPageState extends State<BorrowHistoryPage> {
                 },
               ),
             ],
+
+            // Renew button (only for accepted/pending books)
+            if (!isReturned)
+              Align(
+                alignment: Alignment.centerRight,
+                child: ElevatedButton.icon(
+                  onPressed: () => _sendRenewRequest(record),
+                  icon:
+                      const Icon(Icons.refresh, color: Colors.white, size: 18),
+                  label: const Text("Renew Now"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kPrimaryBrown,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _sendRenewRequest(BorrowRecord record) async {
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) return;
+
+      // Prevent duplicate pending renew requests
+      final existing = await _firestore
+          .collection('renew_requests')
+          .where('userId', isEqualTo: currentUser.uid)
+          .where('bookId', isEqualTo: record.bookId)
+          .where('status', isEqualTo: 'pending')
+          .get();
+
+      if (existing.docs.isNotEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Renewal already requested."),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
+      final renewRef = _firestore.collection('renew_requests').doc();
+
+      await renewRef.set({
+        'renewId': renewRef.id,
+        'bookId': record.bookId,
+        'bookTitle': record.title,
+        'userId': currentUser.uid,
+        'requestedAt': FieldValue.serverTimestamp(),
+        'status': 'pending', // admin will later approve or reject
+        'originalBorrowId': record.id,
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Renewal request sent to admin."),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to send renew request: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }

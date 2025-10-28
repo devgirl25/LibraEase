@@ -31,8 +31,8 @@ class _EBooksPageState extends State<EBooksPage> {
               pinned: true,
               backgroundColor: kPrimaryBrown,
               expandedHeight: 120,
-              flexibleSpace: FlexibleSpaceBar(
-                title: const Text('Browse E-Books'),
+              flexibleSpace: const FlexibleSpaceBar(
+                title: Text('Browse E-Books'),
               ),
               bottom: PreferredSize(
                 preferredSize: const Size.fromHeight(60),

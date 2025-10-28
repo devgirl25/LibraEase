@@ -61,7 +61,7 @@ class _SuccessPageState extends State<SuccessPage>
               confettiController: _confettiController,
               blastDirectionality: BlastDirectionality.explosive,
               shouldLoop: false,
-              colors: [
+              colors: const [
                 Colors.green,
                 Colors.blue,
                 Colors.pink,
