@@ -54,7 +54,7 @@ class NotificationService {
   Future<void> checkAndSendDueDateNotifications() async {
     try {
       final now = DateTime.now();
-      final threeDaysFromNow = now.add(const Duration(days: 3));
+     // final threeDaysFromNow = now.add(const Duration(days: 3));
 
       // Get all borrow requests that are accepted/borrowed
       final borrowRequestsSnapshot = await _firestore

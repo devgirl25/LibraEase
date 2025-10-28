@@ -2,7 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../studenthomepage/Home_page.dart';
 import 'login_page_student.dart' as Login;
-
 class Wrapper extends StatelessWidget {
   const Wrapper({super.key});
 
@@ -11,20 +10,16 @@ class Wrapper extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        // User is logged in
         if (snapshot.connectionState == ConnectionState.active) {
           if (snapshot.hasData) {
-            return const HomePage();
+            return const HomePage(); // logged in
           } else {
-            return const Login.LoginStudentScreen();
+            return const Login.LoginStudentScreen(); // not logged in
           }
         }
 
-        // While checking auth state, show loading
         return const Scaffold(
-          body: Center(
-            child: CircularProgressIndicator(),
-          ),
+          body: Center(child: CircularProgressIndicator()),
         );
       },
     );

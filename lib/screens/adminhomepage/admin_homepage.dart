@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../utils/firestore_helpers.dart';
-import 'package:libraease/screens/adminhomepage/manageregpage.dart';
+//import 'package:libraease/screens/adminhomepage/manageregpage.dart';
 import 'add_ebooks_page.dart';
 import '../../widgets/dashboardcard.dart';
 import 'add_book_page.dart';
@@ -9,6 +9,7 @@ import 'borrow_request_page.dart';
 import 'overdue_books.dart';
 import 'fines_page.dart';
 import 'uploadformpage.dart';
+import 'members_page.dart';
 
 class DashboardGrid extends StatelessWidget {
   const DashboardGrid({super.key});
@@ -42,7 +43,13 @@ class DashboardGrid extends StatelessWidget {
                 value: countText,
                 title: "MEMBERS",
                 icon: Icons.group,
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const AllUsersPage()),
+                  );
+                },
               );
             },
           ),

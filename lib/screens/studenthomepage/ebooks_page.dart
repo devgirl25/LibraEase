@@ -22,166 +22,125 @@ class _EBooksPageState extends State<EBooksPage> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-
     return Scaffold(
       backgroundColor: kScaffoldBackground,
-      appBar: _buildAppBar(context),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final isWide = constraints.maxWidth > 600; // tablet breakpoint
-
-          return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: FirebaseFirestore.instance
-                .collection('ebooks')
-                .orderBy('title')
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
-              }
-
-              final docs = snapshot.data?.docs ?? [];
-
-              if (docs.isEmpty) {
-                return const Center(
-                  child: Text(
-                    'No e-books available',
-                    style: TextStyle(color: kPrimaryBrown, fontSize: 16),
-                  ),
-                );
-              }
-
-              final filteredDocs = docs.where((doc) {
-                final data = doc.data();
-                final title = (data['title'] ?? '').toString().toLowerCase();
-                final author = (data['author'] ?? '').toString().toLowerCase();
-                final query = _searchQuery.toLowerCase();
-                return title.contains(query) || author.contains(query);
-              }).toList();
-
-              if (filteredDocs.isEmpty) {
-                return const Center(
-                  child: Text(
-                    'No e-books found',
-                    style: TextStyle(color: kPrimaryBrown, fontSize: 16),
-                  ),
-                );
-              }
-
-              // 🟢 Responsive list/grid view
-              if (isWide) {
-                // Grid for tablets/web
-                return GridView.builder(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  itemCount: filteredDocs.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 20,
-                    mainAxisSpacing: 20,
-                    childAspectRatio: 3.2,
-                  ),
-                  itemBuilder: (context, index) {
-                    final data = filteredDocs[index].data();
-                    return EBookListItem(
-                      ebookId: filteredDocs[index].id,
-                      title: data['title'] ?? '',
-                      author: data['author'] ?? '',
-                      category: data['category'] ?? 'Unknown',
-                      pdfUrl: data['pdfUrl'] ?? '',
-                      imageUrl: data['imageUrl'] ?? '',
-                      onOpenPreview: (url) => _openPreview(url),
-                    );
-                  },
-                );
-              } else {
-                // List for mobile
-                return ListView.builder(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  itemCount: filteredDocs.length,
-                  itemBuilder: (context, index) {
-                    final data = filteredDocs[index].data();
-                    return Column(
-                      children: [
-                        EBookListItem(
-                          ebookId: filteredDocs[index].id,
-                          title: data['title'] ?? '',
-                          author: data['author'] ?? '',
-                          category: data['category'] ?? 'Unknown',
-                          pdfUrl: data['pdfUrl'] ?? '',
-                          imageUrl: data['imageUrl'] ?? '',
-                          onOpenPreview: (url) => _openPreview(url),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-                    );
-                  },
-                );
-              }
-            },
-          );
-        },
-      ),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
-    return PreferredSize(
-      preferredSize: const Size.fromHeight(100.0),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: kPrimaryBrown,
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              ListTile(
-                leading: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-                title: const Text(
-                  'Browse E-Books',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 22,
-                    color: Colors.white,
-                  ),
-                ),
+      body: SafeArea(
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              pinned: true,
+              backgroundColor: kPrimaryBrown,
+              expandedHeight: 120,
+              flexibleSpace: FlexibleSpaceBar(
+                title: const Text('Browse E-Books'),
               ),
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (value) {
-                      setState(() {
-                        _searchQuery = value;
-                      });
-                    },
-                    decoration: const InputDecoration(
-                      hintText: 'Search e-books..',
-                      prefixIcon: Icon(Icons.search, color: kPrimaryBrown),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(vertical: 14),
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(60),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (value) {
+                        setState(() {
+                          _searchQuery = value;
+                        });
+                      },
+                      decoration: const InputDecoration(
+                        hintText: 'Search e-books...',
+                        prefixIcon: Icon(Icons.search, color: kPrimaryBrown),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(vertical: 14),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+            SliverFillRemaining(
+              child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                stream: FirebaseFirestore.instance
+                    .collection('ebooks')
+                    .orderBy('title')
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+
+                  final docs = snapshot.data?.docs ?? [];
+                  final filteredDocs = docs.where((doc) {
+                    final data = doc.data();
+                    final title = (data['title'] ?? '').toLowerCase();
+                    final author = (data['author'] ?? '').toLowerCase();
+                    return title.contains(_searchQuery.toLowerCase()) ||
+                        author.contains(_searchQuery.toLowerCase());
+                  }).toList();
+
+                  if (filteredDocs.isEmpty) {
+                    return const Center(
+                      child: Text('No e-books found',
+                          style: TextStyle(color: kPrimaryBrown)),
+                    );
+                  }
+
+                  final screenWidth = MediaQuery.of(context).size.width;
+                  final isWide = screenWidth > 600;
+
+                  return Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: isWide
+                        ? GridView.builder(
+                            itemCount: filteredDocs.length,
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              mainAxisSpacing: 16,
+                              crossAxisSpacing: 16,
+                              childAspectRatio: 3.2,
+                            ),
+                            itemBuilder: (context, index) {
+                              final data = filteredDocs[index].data();
+                              return EBookListItem(
+                                title: data['title'] ?? '',
+                                author: data['author'] ?? '',
+                                category: data['category'] ?? 'Unknown',
+                                pdfUrl: data['pdfUrl'] ?? '',
+                                imageUrl: data['imageUrl'] ?? '',
+                                onOpenPreview: (url) => _openPreview(url),
+                              );
+                            },
+                          )
+                        : ListView.builder(
+                            itemCount: filteredDocs.length,
+                            itemBuilder: (context, index) {
+                              final data = filteredDocs[index].data();
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: EBookListItem(
+                                  title: data['title'] ?? '',
+                                  author: data['author'] ?? '',
+                                  category: data['category'] ?? 'Unknown',
+                                  pdfUrl: data['pdfUrl'] ?? '',
+                                  imageUrl: data['imageUrl'] ?? '',
+                                  onOpenPreview: (url) => _openPreview(url),
+                                ),
+                              );
+                            },
+                          ),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -201,8 +160,7 @@ class _EBooksPageState extends State<EBooksPage> {
   }
 }
 
-class EBookListItem extends StatefulWidget {
-  final String ebookId;
+class EBookListItem extends StatelessWidget {
   final String title;
   final String author;
   final String category;
@@ -212,7 +170,6 @@ class EBookListItem extends StatefulWidget {
 
   const EBookListItem({
     super.key,
-    required this.ebookId,
     required this.title,
     required this.author,
     required this.category,
@@ -221,11 +178,6 @@ class EBookListItem extends StatefulWidget {
     this.onOpenPreview,
   });
 
-  @override
-  State<EBookListItem> createState() => _EBookListItemState();
-}
-
-class _EBookListItemState extends State<EBookListItem> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -248,11 +200,11 @@ class _EBookListItemState extends State<EBookListItem> {
               color: Colors.grey[300],
               borderRadius: BorderRadius.circular(10),
             ),
-            child: widget.imageUrl.isNotEmpty
+            child: imageUrl.isNotEmpty
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(10),
                     child: Image.network(
-                      widget.imageUrl,
+                      imageUrl,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) => const Icon(
                           Icons.menu_book,
@@ -274,7 +226,7 @@ class _EBookListItemState extends State<EBookListItem> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.title,
+                        title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -285,9 +237,7 @@ class _EBookListItemState extends State<EBookListItem> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        widget.author.isNotEmpty
-                            ? widget.author
-                            : 'Unknown author',
+                        author.isNotEmpty ? author : 'Unknown author',
                         style: TextStyle(
                           fontSize: isWide ? 13 : 12,
                           color: kPrimaryBrown.withOpacity(0.7),
@@ -300,12 +250,12 @@ class _EBookListItemState extends State<EBookListItem> {
                         isWide ? Alignment.centerLeft : Alignment.centerRight,
                     child: ElevatedButton(
                       onPressed: () {
-                        if (widget.pdfUrl.isNotEmpty) {
-                          widget.onOpenPreview?.call(widget.pdfUrl);
+                        if (pdfUrl.isNotEmpty) {
+                          onOpenPreview?.call(pdfUrl);
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('PDF not available')),
-                          );
+                              const SnackBar(
+                                  content: Text('PDF not available')));
                         }
                       },
                       style: ElevatedButton.styleFrom(
