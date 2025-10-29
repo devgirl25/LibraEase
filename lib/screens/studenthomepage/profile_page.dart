@@ -57,8 +57,11 @@ class _ProfilePageState extends State<ProfilePage> {
         DateTime? dueDate;
         if (dueDateRaw is Timestamp) {
           dueDate = dueDateRaw.toDate();
-        } else if (dueDateRaw is String) dueDate = DateTime.tryParse(dueDateRaw);
+        } else if (dueDateRaw is String) {
+          dueDate = DateTime.tryParse(dueDateRaw);
+        }
 
+        // ✅ Null-safe check
         if (status == 'returned') {
           ebooksReadCount++;
         } else if (status == 'accepted' &&

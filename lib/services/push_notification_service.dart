@@ -15,7 +15,7 @@ class PushNotificationService {
       // Get and save FCM token
       String? token = await _fcm.getToken();
       print('FCM Token: $token');
-      if (token != null && FirebaseAuth.instance.currentUser != null) {
+      if (FirebaseAuth.instance.currentUser != null) {
         await FirebaseFirestore.instance
             .collection('users')
             .doc(FirebaseAuth.instance.currentUser!.uid)

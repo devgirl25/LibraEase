@@ -46,8 +46,7 @@ class DashboardGrid extends StatelessWidget {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                        builder: (context) => const AllUsersPage()),
+                    MaterialPageRoute(builder: (context) => const AllUsersPage()),
                   );
                 },
               );

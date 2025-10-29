@@ -50,9 +50,9 @@ class DashboardCard extends StatelessWidget {
               // Icon container
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: const LinearGradient(
+                  gradient: LinearGradient(
                     colors: [Color(0xFF255A5A), Color(0xFF408C8C)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -61,7 +61,7 @@ class DashboardCard extends StatelessWidget {
                     BoxShadow(
                       color: Colors.black26,
                       blurRadius: 6,
-                      offset: const Offset(2, 3),
+                      offset: Offset(2, 3),
                     ),
                   ],
                 ),
